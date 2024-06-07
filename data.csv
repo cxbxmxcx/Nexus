@@ -1,0 +1,28 @@
+,id,tracking_id,function,name,model,in_tokens,out_tokens,elapsed_time,timestamp
+0,chatcmpl-08f00774-6970-47e1-8ab4-9367bf80f453,chat:thread1:Micheal,Not Set,GroqAgent,mixtral-8x7b-32768,262,109,0,2024-04-20 19:21:47
+1,chatcmpl-2e1b2c8c-5cf4-41dd-b4f5-b6721ef5718b,chat:thread1:Micheal,memory:append,GroqAgent,mixtral-8x7b-32768,202,101,0,2024-04-20 19:21:48
+2,chatcmpl-e24de13a-4dfe-4e59-9bb2-f7909b289754,exec_template:reasoning_evaluation:1713640946,template:reasoning_evaluation:partial:reasoning:input_prompt,GroqAgent,mixtral-8x7b-32768,92,124,0,2024-04-20 19:22:35
+3,chatcmpl-729f0c67-fa36-43a2-9426-a52deed7339b,exec_template:reasoning_evaluation:1713640946,template:reasoning_evaluation:input_prompt,GroqAgent,mixtral-8x7b-32768,173,109,0,2024-04-20 19:22:36
+4,chatcmpl-f8d0daec-5e99-482f-85b3-73e5bc1f8d30,exec_template:reasoning_evaluation:1713640946,template:reasoning_evaluation:partial:evaluation:input_prompt,GroqAgent,mixtral-8x7b-32768,174,81,0,2024-04-20 19:22:36
+5,chatcmpl-d5af7fd1-bf48-4413-9f8d-1f54b112405c,exec_template:reasoning_evaluation:1713640946,template:reasoning_evaluation:output_prompt,GroqAgent,mixtral-8x7b-32768,126,57,0,2024-04-20 19:22:36
+6,chatcmpl-24a69c37-fd29-43e9-85f8-8ab9f9cee47c,exec_template:reasoning_evaluation:1713641134,template:reasoning_evaluation:partial:reasoning:input_prompt,GroqAgent,mixtral-8x7b-32768,93,223,0,2024-04-20 19:25:34
+7,chatcmpl-de785be0-f838-45cc-93d3-6bd7a1267109,exec_template:reasoning_evaluation:1713641134,template:reasoning_evaluation:input_prompt,GroqAgent,mixtral-8x7b-32768,273,114,0,2024-04-20 19:25:35
+8,chatcmpl-84b872c6-12b3-493c-8157-e663f98f8ff0,exec_template:reasoning_evaluation:1713641134,template:reasoning_evaluation:partial:evaluation:input_prompt,GroqAgent,mixtral-8x7b-32768,179,79,0,2024-04-20 19:25:35
+9,chatcmpl-9ba4842a-ee51-492e-ad63-c975bde08e87,exec_template:reasoning_evaluation:1713641134,template:reasoning_evaluation:output_prompt,GroqAgent,mixtral-8x7b-32768,241,47,0,2024-04-20 19:25:36
+10,chatcmpl-074a050f-a9e8-4a46-b6e3-ee0cb039ab65,exec_template:reasoning_evaluation:1713641231,template:reasoning_evaluation:partial:reasoning:input_prompt,GroqAgent,mixtral-8x7b-32768,93,296,0,2024-04-20 19:28:03
+11,chatcmpl-78dbbdb7-703d-4d73-bbcf-8b0768c5f522,exec_template:reasoning_evaluation:1713641231,template:reasoning_evaluation:input_prompt,GroqAgent,mixtral-8x7b-32768,346,138,0,2024-04-20 19:28:35
+12,chatcmpl-dab23cb2-9d6a-40a6-aa9d-1d97272a1272,exec_template:reasoning_evaluation:1713641231,template:reasoning_evaluation:partial:evaluation:input_prompt,GroqAgent,mixtral-8x7b-32768,203,226,0,2024-04-20 19:29:18
+13,chatcmpl-6507e3fe-8faa-49e3-8a76-7b7a3bd9aab3,exec_template:reasoning_evaluation:1713641231,template:reasoning_evaluation:output_prompt,GroqAgent,mixtral-8x7b-32768,412,76,0,2024-04-20 19:29:40
+14,msg_0165hexhvvLYJZCUmwrJgikv,chat:thread2:Micheal,Not Set,AnthropicAgent,claude-3-opus-20240229,130,80,5,2024-04-20 20:30:39
+15,msg_01D8HjcjFBpayKeZeySeyG5u,chat:thread2:Micheal,memory:append,AnthropicAgent,claude-3-opus-20240229,158,91,4,2024-04-20 20:30:43
+16,msg_01Cy8f1o6CL5FmHd6jQ712yh,exec_template:reasoning:1713645065,template:reasoning:input_prompt,AnthropicAgent,claude-3-opus-20240229,83,246,12,2024-04-20 20:31:34
+17,chatcmpl-70055139-5b0c-4ae8-a2f4-f71ff7545546,exec_template:reasoning_evaluation:1713645727,template:reasoning_evaluation:partial:reasoning:input_prompt,GroqAgent,mixtral-8x7b-32768,80,197,0,2024-04-20 20:42:07
+18,chatcmpl-8b5ae7cb-fae2-42e5-beea-19a94aed9210,exec_template:reasoning_evaluation:1713645727,template:reasoning_evaluation:input_prompt,GroqAgent,mixtral-8x7b-32768,234,71,0,2024-04-20 20:43:08
+19,msg_01B1DPYS7rrDbbkcnxmyumgA,exec_template:reasoning_evaluation:1713646305,template:reasoning_evaluation:partial:reasoning:input_prompt,AnthropicAgent,claude-3-opus-20240229,77,322,14,2024-04-20 20:51:59
+20,msg_01KKsN1MgUDTYZGJP21ViGhC,exec_template:reasoning_evaluation:1713646305,template:reasoning_evaluation:input_prompt,AnthropicAgent,claude-3-opus-20240229,351,117,8,2024-04-20 20:52:16
+21,msg_01AhDaF9aHYF5PkJpqVKGQ7a,exec_template:reasoning_evaluation:1713646305,template:reasoning_evaluation:partial:evaluation:input_prompt,AnthropicAgent,claude-3-opus-20240229,178,160,8,2024-04-20 20:52:40
+22,msg_01WowVTVscwssigYGu2uEXzD,exec_template:reasoning_evaluation:1713646305,template:reasoning_evaluation:output_prompt,AnthropicAgent,claude-3-opus-20240229,316,139,10,2024-04-20 20:52:55
+23,chatcmpl-86c64044-f858-4642-8ef2-12a4e13af53f,exec_template:reasoning_evaluation:1713646404,template:reasoning_evaluation:partial:reasoning:input_prompt,GroqAgent,mixtral-8x7b-32768,80,209,0,2024-04-20 20:53:25
+24,chatcmpl-4124d0f5-079c-4204-83bf-48d24bfd0f8e,exec_template:reasoning_evaluation:1713646404,template:reasoning_evaluation:input_prompt,GroqAgent,mixtral-8x7b-32768,246,98,0,2024-04-20 20:53:31
+25,chatcmpl-a9e5b33a-8eb2-4cd5-a365-d1383120e9c6,exec_template:reasoning_evaluation:1713646404,template:reasoning_evaluation:partial:evaluation:input_prompt,GroqAgent,mixtral-8x7b-32768,165,85,0,2024-04-20 20:53:32
+26,chatcmpl-932015f0-c649-4fdf-bff8-acccf20779a1,exec_template:reasoning_evaluation:1713646404,template:reasoning_evaluation:output_prompt,GroqAgent,mixtral-8x7b-32768,233,67,0,2024-04-20 20:53:32

@@ -1,0 +1,58 @@
+[{
+    "name": "Copy",
+    "feather": "Copy",
+    "hasText": true,
+    "alwaysOn": true,
+    "commands": ["copyAll", 
+                 ["infoMessage", 
+                  {
+                   "text":"Copied to clipboard!",
+                   "timeout": 2500, 
+                   "classToggle": "show"
+                  }
+                 ]
+                ],
+    "style": {"top": "0.0rem", "right": "0.4rem"}
+  },
+  {
+    "name": "Test",
+    "feather": "Play",
+    "primary": true,
+    "hasText": true,
+    "alwaysOn": true,
+    "showWithIcon": true,
+    "commands": ["submit", 
+                  ["infoMessage", 
+                  {
+                    "text":"Test the prompt",
+                    "timeout": 2500, 
+                    "classToggle": "show"
+                  }
+                  ]
+                ],
+    "style": {"top": "0.0rem", "right": "9.0rem"}
+  },{
+    "name": "Shortcuts",
+    "feather": "Type",
+    "class": "shortcuts-button",
+    "hasText": true,
+    "commands": ["toggleKeyboardShortcuts", ["conditionalExecute", {"targetQueryString": "#kbshortcutmenu", "condition": true, "command":["infoMessage", {"text":"VSCode keyboard shortcuts", "timeout": 2500, "classToggle": "show"}]}]],
+    "style": {"bottom": "4.0rem", "right": "0.4rem"}
+  },  
+  {
+    "name": "Save",
+    "feather": "Save",
+    "hasText": true,
+    "alwaysOn": true,
+    "commands": ["save-state", ["response","saved"]],
+    "response": "saved",
+    "style": {"top": "0.0rem", "right": "5.0rem"}
+  },  
+  {
+    "name": "Command",
+    "feather": "Terminal",
+    "primary": true,
+    "hasText": true,
+    "commands": ["openCommandPallete"],
+    "style": {"bottom": "1.0rem", "right": "0.4rem"}
+  }]
