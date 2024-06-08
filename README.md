@@ -31,7 +31,7 @@ To begin using Nexus, you need to set up a Python virtual environment (version 3
 
 ```bash
 # Install Nexus directly from the GitHub repository
-pip install git+https://github.com/cxbxmxcx/Nexus.git
+pip install git+https://github.com/cxbxmxcx/Neuxs.git
 
 # Set your OpenAI API Key
 export OPENAI_API_KEY="<your API key>"
@@ -49,10 +49,12 @@ After running the application, a web interface will launch, allowing you to log 
 #### Development Setup
 
 For those interested in contributing to Nexus or customizing it further:
-
+https://github.com/cxbxmxcx/Neuxs.git
 ```bash
 # Clone the Nexus repository 
-git clone https://github.com/cxbxmxcx/Nexus.git
+git clone https://github.com/cxbxmxcx/Neuxs.git
+
+cd Nexus
 
 # Install the cloned repository in editable mode
 pip install -e Nexus
