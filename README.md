@@ -1,15 +1,15 @@
 # AI Agent Nexus: Open-Source Agent Platform
 
-![Build Status](https://travis-ci.com/cxbxmxcx/AI-Agent-Nexus.svg?branch=main)
-![License](https://img.shields.io/github/license/cxbxmxcx/AI-Agent-Nexus)
-![Python Version](https://img.shields.io/pypi/pyversions/AI-Agent-Nexus)
-![Issues](https://img.shields.io/github/issues/cxbxmxcx/AI-Agent-Nexus)
-![Pull Requests](https://img.shields.io/github/issues-pr/cxbxmxcx/AI-Agent-Nexus)
-![Code Size](https://img.shields.io/github/languages/code-size/cxbxmxcx/AI-Agent-Nexus)
+![Build Status](https://travis-ci.com/cxbxmxcx/Nexus.svg?branch=main)
+![License](https://img.shields.io/github/license/cxbxmxcx/Nexus)
+![Python Version](https://img.shields.io/pypi/pyversions/Nexus)
+![Issues](https://img.shields.io/github/issues/cxbxmxcx/Nexus)
+![Pull Requests](https://img.shields.io/github/issues-pr/cxbxmxcx/Nexus)
+![Code Size](https://img.shields.io/github/languages/code-size/cxbxmxcx/Nexus)
 
 ## Introduction
 
-AI-Agent-Nexus (Nexus) is an innovative, open-source platform developed to assist in the development, testing, and hosting of AI Agents. It is being developed in tandem with writing the book AI Agents In Action from Manning Publications. The platform is built upon the Python web application framework Streamlit, and offers a user-friendly chat and dashboard interface. This platform facilitates the creation of intelligent dashboards, prototypes, and AI-Agent chat applications, making it a versatile tool for developers at all levels.
+Nexus is an innovative, open-source platform developed to assist in the development, testing, and hosting of AI Agents. It is being developed in tandem with writing the book AI Agents In Action from Manning Publications. The platform is built upon the Python web application framework Streamlit, and offers a user-friendly chat and dashboard interface. This platform facilitates the creation of intelligent dashboards, prototypes, and AI-Agent chat applications, making it a versatile tool for developers at all levels.
 
 Designed with simplicity, exploration, and power in mind, Nexus stands out in a crowded field of over one hundred AI-Agent platforms and toolkits. Unlike other tools, which range from basic toolkits like Semantic Kernel or LangChain to complete platforms like AutoGen and CrewAI, Nexus focuses on teaching the core concepts of building full-featured AI-Agent agents. It integrates seamlessly with profiles/personas and actions/tools, allowing users to extend its capabilities according to their needs.
 
@@ -31,7 +31,7 @@ To begin using Nexus, you need to set up a Python virtual environment (version 3
 
 ```bash
 # Install Nexus directly from the GitHub repository
-pip install git+https://github.com/cxbxmxcx/AI-Agent-Nexus.git
+pip install git+https://github.com/cxbxmxcx/Nexus.git
 
 # Set your OpenAI API Key
 export OPENAI_API_KEY="<your API key>"
@@ -52,7 +52,7 @@ For those interested in contributing to Nexus or customizing it further:
 
 ```bash
 # Clone the Nexus repository 
-git clone https://github.com/cxbxmxcx/AI-Agent-Nexus.git
+git clone https://github.com/cxbxmxcx/Nexus.git
 
 # Install the cloned repository in editable mode
 pip install -e Nexus
