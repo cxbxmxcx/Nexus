@@ -20,6 +20,14 @@
       "justMyCode": True
     },
     {
+      "name": "Python Debugger: Gradio UI",
+      "type": "debugpy",
+      "request": "launch",
+      "program" : "nexus/gradio_ui/main.py",
+      "console": "integratedTerminal",   
+      "justMyCode": True
+    },
+    {
       "name": "Python Debugger: FastAPI API",
       "type": "debugpy",
       "request": "launch",

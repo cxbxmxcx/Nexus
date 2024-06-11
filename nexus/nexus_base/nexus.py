@@ -104,6 +104,9 @@ class Nexus:
             thread_id, assistant_id, user_input
         )
 
+    def create_agent(self, agent_name, agent_profile):
+        return self.agent_manager.create_agent(agent_name, agent_profile)
+
     def load_profiles(self):
         profiles = self.profile_manager.agent_profiles
         print(f"Loaded {len(profiles)} profiles.")
