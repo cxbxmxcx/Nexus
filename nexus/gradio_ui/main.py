@@ -1,10 +1,16 @@
+import os
+import queue
 import re
+import threading
+import time
 from contextlib import contextmanager
 
 import gradio as gr
 
 from nexus.gradio_ui.agents_panel import agents_panel
 from nexus.gradio_ui.gradio_logging import Logger
+from nexus.gradio_ui.thread_panel import thread_panel
+from nexus.nexus_base.global_values import GlobalValues
 from nexus.nexus_base.nexus import Nexus
 
 # from playground.actions_manager import ActionsManager
@@ -57,40 +63,34 @@ def print_like_dislike(x: gr.LikeData):
     print(x.index, x.value, x.liked)
 
 
-def ask_agent(agent, history, message):
-    # assistant = api.retrieve_assistant(assistant_id)
-    # if assistant is None:
-    #     history.append((None, "Assistant not found."))
-    #     return history, gr.MultimodalTextbox(value=None, interactive=False)
+def ask_agent(agent_id, thread_id, history, message):
+    agent = nexus.get_agent(agent_id)
+    if agent is None:
+        history.append((None, "Agent not found."))
+        return history, gr.MultimodalTextbox(value=None, interactive=False)
 
-    # if history is None:
-    #     history = []
+    if history is None:
+        history = []
 
-    # attachments = []
-    # content = ""
-    # for file in message["files"]:
-    #     tools, actions = get_tools(assistant.tools)
-    #     if "Code Interpreter" in tools:
-    #         # upload files to the thread
-    #         file = api.upload_file(file)
-    #         attachments += [
-    #             {"file_id": file.id, "tools": [{"type": "code_interpreter"}]}
-    #         ]
-    #     else:
-    #         with open(file, "r") as f:
-    #             file_content = f.read()
-    #         file = os.path.basename(file)
-    #         file_path = os.path.join(ASSISTANTS_WORKING_FOLDER, file)
-    #         with open(file_path, "w") as file:
-    #             file.write(file_content)
-    #             attachments = None
-    #         history.append((f"file {file}, saved to working folder.", None))
+    attachments = []
+    content = ""
+    for file in message["files"]:
+        with open(file, "r") as f:
+            file_content = f.read()
+        file = os.path.basename(file)
+        file_path = os.path.join(GlobalValues.AGENTS_WORKING_FOLDER, file)
+        with open(file_path, "w") as file:
+            file.write(file_content)
+            attachments = None
+        history.append((f"file {file}, saved to working folder.", None))
 
-    # if message["text"] is not None:
-    #     history.append((message["text"], None))
-    #     content = message["text"]
+    if message["text"] is not None:
+        history.append((message["text"], None))
+        content = message["text"]
     # if content or attachments:  # only create a message if there is content
     #     api.create_thread_message(thread.id, "user", content, attachments=attachments)
+    if content:
+        nexus.post_message(thread_id, username, role="user", content=content)
 
     return history, gr.MultimodalTextbox(value=None, interactive=False)
 
@@ -100,82 +100,108 @@ def dummy_stream(*args, **kwargs):
     yield ["streaming data"]
 
 
-# def extract_file_paths(text):
-#     # Regular expression pattern to match file paths
-#     # This pattern matches typical file paths in Windows and Unix-like systems
-#     pattern = r"(?:[a-zA-Z]:\\)?(?:[a-zA-Z0-9_-]+\\)*[a-zA-Z0-9_-]+\.[a-zA-Z0-9]+|(?:\/[a-zA-Z0-9_-]+)+\/?"
+def extract_file_paths(text):
+    # Regular expression pattern to match file paths
+    # This pattern matches typical file paths in Windows and Unix-like systems
+    pattern = r"(?:[a-zA-Z]:\\)?(?:[a-zA-Z0-9_-]+\\)*[a-zA-Z0-9_-]+\.[a-zA-Z0-9]+|(?:\/[a-zA-Z0-9_-]+)+\/?"
 
-#     # Find all matching file paths in the text
-#     file_paths = re.findall(pattern, text)
+    # Find all matching file paths in the text
+    file_paths = re.findall(pattern, text)
 
-#     unique_file_paths = list(set(file_paths))
+    unique_file_paths = list(set(file_paths))
 
-#     return unique_file_paths
-
-
-# def get_file_path(file):
-#     if os.path.isabs(file):
-#         return file
-
-#     file_path = os.path.join(ASSISTANTS_WORKING_FOLDER, file)
-#     return file_path
+    return unique_file_paths
 
 
-def run(history, agent):
-    # assistant = api.retrieve_assistant(assistant_id)
-    # output_queue = queue.Queue()
+def get_file_path(file):
+    if os.path.isabs(file):
+        return file
+
+    file_path = os.path.join(GlobalValues.AGENTS_WORKING_FOLDER, file)
+    return file_path
+
+
+class StreamContextManager:
+    def __init__(self, nexus, thread_id, agent):
+        self.nexus = nexus
+        self.thread_id = thread_id
+        self.agent = agent
+        self.generator = None
+
+    def __enter__(self):
+        self.generator = self.nexus.run_stream(self.thread_id, self.agent)
+        return self
+
+    def __exit__(self, exc_type, exc_value, traceback):
+        self.generator = None
+
+    @property
+    def text_deltas(self):
+        if self.generator:
+            for partial_message in self.generator:
+                yield partial_message
+
+
+def run(history, agent_id, thread_id):
+    output_queue = queue.Queue()
     # eh = EventHandler(output_queue)
+    agent = nexus.get_agent(agent_id)
 
-    # if assistant is None:
-    #     msg = "Assistant not found."
-    #     history.append((None, msg))
-    #     yield history
-    #     return
+    if agent is None:
+        msg = "Assistant not found."
+        history.append((None, msg))
+        yield history
+        return
+    if thread_id is None:
+        msg = "Thread not found."
+        history.append((None, msg))
+        yield history
+        return
 
-    # def stream_worker(assistant_id, thread_id, event_handler):
-    #     with api.run_stream(
-    #         thread_id=thread_id,
-    #         assistant_id=assistant_id,
-    #         event_handler=event_handler,
-    #     ) as stream:
-    #         for text in stream.text_deltas:
-    #             output_queue.put(("text", text))
+    def stream_worker(agent, thread_id):
+        with StreamContextManager(nexus, thread_id, agent) as stream:
+            for text in stream.text_deltas:
+                output_queue.put(("text", text))
+        # with nexus.run_stream(
+        #     thread_id=thread_id,
+        #     agent=agent,
+        # ) as stream:
+        #     for text in stream.text_deltas:
+        #         output_queue.put(("text", text))
 
-    # # Start the initial stream
-    # thread_id = thread.id
-    # initial_thread = threading.Thread(
-    #     target=stream_worker, args=(assistant.id, thread_id, eh)
-    # )
-    # initial_thread.start()
-    # history[-1][1] = ""
-    # while initial_thread.is_alive() or not output_queue.empty():
-    #     try:
-    #         item_type, item_value = output_queue.get(timeout=0.1)
-    #         if item_type == "text":
-    #             history[-1][1] += item_value
-    #             # history[-1][1] = wrap_latex_with_markdown(history[-1][1])
-    #         yield history
+    initial_thread = threading.Thread(target=stream_worker, args=(agent, thread_id))
+    initial_thread.start()
+    history[-1][1] = ""
+    while initial_thread.is_alive() or not output_queue.empty():
+        try:
+            item_type, item_value = output_queue.get(timeout=0.1)
+            if item_type == "text":
+                history[-1][1] = item_value
+                # history[-1][1] = wrap_latex_with_markdown(history[-1][1])
+            yield history
 
-    #     except queue.Empty:
-    #         pass
-    # # history[-1][1] = wrap_latex_with_markdown(history[-1][1])
-    # yield history
+        except queue.Empty:
+            pass
+    # history[-1][1] = wrap_latex_with_markdown(history[-1][1])
+    yield history
 
-    # files = extract_file_paths(history[-1][1])
-    # for file in files:
-    #     file_path = get_file_path(file)
-    #     if os.path.exists(file_path):
-    #         history.append((None, (file_path,)))
-    #     yield history
+    files = extract_file_paths(history[-1][1])
+    for file in files:
+        file_path = get_file_path(file)
+        if os.path.exists(file_path):
+            history.append((None, (file_path,)))
+        yield history
 
-    # # Final flush of images
+    # Final flush of images
     # while len(eh.images) > 0:
     #     history.append((None, (eh.images.pop(),)))
     #     yield history
 
-    # initial_thread.join()
-    # return None
-    return history
+    initial_thread.join()
+    nexus.post_message(
+        thread_id, agent.agent_id, role="assistant", content=history[-1][1]
+    )
+    return None
 
 
 # Custom CSS
@@ -198,6 +224,11 @@ body, html {
 
 #chatbot {
     height: calc(100vh - var(--adjustment-ratio)) !important; /* Uses adjustment ratio */
+    overflow-y: auto !important;
+}
+
+#messagebox {
+    height: calc(100vh - var(--adjustment-ratio) - 240) !important; /* Uses adjustment ratio */
     overflow-y: auto !important;
 }
 
@@ -245,18 +276,20 @@ video:hover {
 
 
 def update_message(request: gr.Request):
-    return f"### Welcome, {request.username}"
+    username = request.username
+    return username, f"### Welcome, {username}"
 
 
 theme = "default"
 
 with gr.Blocks(css=custom_css, theme=theme) as demo:
-    username = gr.Markdown("", elem_id="username")
+    username_display = gr.Markdown("", elem_id="username")
+    username = gr.Markdown("", visible=False)
 
     with gr.Tab(label="Agent Playground"):
         with gr.Row():
-            with gr.Column(scale=4):
-                agent = agents_panel(nexus)
+            with gr.Column(scale=2):
+                agent_id = agents_panel(nexus)
 
             with gr.Column(scale=8):
                 chatbot = gr.Chatbot(
@@ -276,22 +309,10 @@ with gr.Blocks(css=custom_css, theme=theme) as demo:
                     elem_id="chat_input",
                 )
 
-                chat_msg = chat_input.submit(
-                    ask_agent,
-                    [agent, chatbot, chat_input],
-                    [chatbot, chat_input],
-                )
-                bot_msg = chat_msg.then(
-                    run,
-                    [chatbot, agent],
-                    [chatbot],
-                    api_name="agent_response",
-                )
-                bot_msg.then(
-                    lambda: gr.MultimodalTextbox(interactive=True), None, [chat_input]
-                )
-
                 chatbot.like(print_like_dislike, None, None)
+
+            with gr.Column(scale=2):
+                thread_id, notify = thread_panel(nexus, username)
 
     with gr.Tab(label="Logs"):
         with gr.Column(scale=4):
@@ -300,7 +321,28 @@ with gr.Blocks(css=custom_css, theme=theme) as demo:
                 label="", language="python", interactive=False, container=True, lines=45
             )
             demo.load(logger.read_logs, None, logs, every=1)
-            demo.load(update_message, None, username)
+            demo.load(update_message, None, [username, username_display])
+
+    chat_msg = chat_input.submit(
+        ask_agent,
+        [agent_id, thread_id, chatbot, chat_input],
+        [chatbot, chat_input],
+    )
+    bot_msg = chat_msg.then(
+        run,
+        [chatbot, agent_id, thread_id],
+        [chatbot],
+        api_name="agent_response",
+    )
+    after_msg = bot_msg.then(
+        lambda: gr.MultimodalTextbox(interactive=True), None, [chat_input]
+    )
+
+    def notify_input(input):
+        return str(time.time())
+
+    after_msg.then(notify_input, chat_input, [notify])
+
 demo.queue()
 
 

@@ -1,207 +1,118 @@
-import functools
-import importlib.util
-import os
-
-
-class BaseAgent:
-    _supports_actions = False
-    _supports_memory = False
-    _supports_knowledge = False
-
-    def __init__(self, chat_history=None):
-        self._chat_history = chat_history or []
-        self.last_message = ""
-        self._actions = []
-        self._profile = None
-        self.attribute_options = {}
-
-    def add_attribute_options(self, name, details):
-        """Add or update an attribute with its details."""
-        self.attribute_options[name] = details
-
-    def get_attribute_option(self, name):
-        """Get options or constraints for a given attribute."""
-        return self.attribute_options.get(name, None)
-
-    def get_attribute_options(self):
-        """Get all attribute options."""
-        return self.attribute_options
-
-    async def get_response(self, user_input, thread_id=None):
-        # Placeholder method to be implemented by subclasses
-        raise NotImplementedError("This method should be implemented by subclasses.")
-
-    async def get_semantic_response(self, prompt, thread_id=None):
-        # Placeholder method to be implemented by subclasses
-        raise NotImplementedError("This method should be implemented by subclasses.")
-
-    def get_response_stream(self, user_input, thread_id=None):
-        # Placeholder method for streaming responses, to be implemented by subclasses
-        raise NotImplementedError("This method should be implemented by subclasses.")
-
-    def append_chat_history(self, thread_id, user_input, response):
-        # Method to append user input and bot response to the chat history
-        self._chat_history.append(
-            {"role": "user", "content": user_input, "thread_id": thread_id}
-        )
-        self._chat_history.append(
-            {"role": "bot", "content": response, "thread_id": thread_id}
-        )
-
-    def load_chat_history(self):
-        # Placeholder method to load and format chat history for the specific tool
-        raise NotImplementedError("This method should be implemented by subclasses.")
-
-    def load_actions(self):
-        # Placeholder method to load and format actions for the specific tool
-        raise NotImplementedError("This method should be implemented by subclasses.")
-
-    @property
-    def chat_history(self):
-        return self._chat_history
-
-    # define the setter method
-    @chat_history.setter
-    def chat_history(self, chat_history):
-        self._chat_history = chat_history
-        self.load_chat_history()
-
-    @property
-    def actions(self):
-        return self._actions
-
-    @actions.setter
-    def actions(self, actions):
-        self._actions = actions
-        self.load_actions()
-
-    @property
-    def name(self):
-        # Property to get the name of the agent
-        return self.__class__.__name__
-
-    @property
-    def profile(self):
-        return self._profile
-
-    @profile.setter
-    def profile(self, profile):
-        self._profile = profile
-
-    @classmethod
-    def get_supports_actions(cls):
-        return cls._supports_actions
-
-    @property
-    def supports_actions(self):
-        return self.get_supports_actions()
-
-    @classmethod
-    def get_supports_memory(cls):
-        return cls._supports_memory
-
-    @property
-    def supports_memory(self):
-        return self.get_supports_memory()
-
-    @classmethod
-    def get_supports_knowledge(cls):
-        return cls._supports_knowledge
-
-    @property
-    def supports_knowledge(self):
-        return self.get_supports_knowledge()
-
-
-def get_nested_attr(obj, attr_path):
-    """
-    Safely retrieves a nested attribute using a dot-separated path.
-    """
-    current = obj
-    for attr in attr_path.split("."):
-        try:
-            current = getattr(current, attr)
-        except AttributeError:
-            return None
-    return current
+from nexus.nexus_base.nexus_models import Agent, db
+from nexus.nexus_base.utils import id_hash
 
 
 class AgentManager:
-    def __init__(self, tracking_manager=None):
-        agent_directory = os.path.join(os.path.dirname(__file__), "nexus_agents")
-        self.agents = self._load_agents(agent_directory)
-        self.tracking_manager = tracking_manager
-        if self.tracking_manager:
-            self.track_agents(self.agents)
+    def __init__(self):
+        pass
 
-    def get_agent(self, agent_name):
-        for agent in self.agents:
-            if agent.name == agent_name:
-                return agent
-        return None
-
-    def track_agents(self, agents):
-        for agent in agents:
-            self.track_agent_client(agent)
-
-    def track_agent_client(self, agent):
-        client = agent.client
-        create_path = "chat.completions.create"  # Default path for OpenAI style client
-        messages_path = "messages.create"  # Default path for Anthropic style client
-
-        # Get the method for chat.completions.create if it exists
-        chat_create_method = get_nested_attr(client, create_path)
-        if chat_create_method:
-            # Patching OpenAI style client
-            setattr(
-                client.chat.completions,
-                "create",
-                functools.partial(
-                    self.tracking_manager.track_chat_create(
-                        chat_create_method, agent.name
-                    ),
-                    client.chat.completions,
-                ),
+    def create_agent(self, **kwargs):
+        try:
+            id = id_hash(kwargs["name"])
+            kwargs["agent_id"] = f"agent_{id}"
+            kwargs["thought_template"] = (
+                None  # Assuming ThoughtTemplate is not implemented yet
             )
+            with db.atomic():
+                agent = Agent.create(**kwargs)
+            return agent
+        except Agent.IntegrityError as e:
+            print(f"Error creating agent: {e}")
+            return None
 
-        # Get the method for messages.create if it exists
-        messages_create_method = get_nested_attr(client, messages_path)
-        if messages_create_method:
-            # Patching Anthropic style client
-            setattr(
-                client.messages,
-                "create",
-                functools.partial(
-                    self.tracking_manager.track_messages_create(
-                        messages_create_method, agent.name
-                    ),
-                    client.messages,
-                ),
-            )
+    def get_agent(self, agent_id):
+        try:
+            agent = Agent.get(Agent.agent_id == agent_id)
+            return agent
+        except Agent.DoesNotExist:
+            print(f"Agent with ID {agent_id} does not exist.")
+            return None
 
-    def get_agent_names(self):
-        return [agent.name for agent in self.agents]
+    def get_agent_by_name(self, name):
+        try:
+            agent = Agent.get(Agent.name == name)
+            return agent
+        except Agent.DoesNotExist:
+            print(f"Agent with name {name} does not exist.")
+            return None
 
-    def _load_agents(self, agent_directory):
-        agents = []
-        for filename in os.listdir(agent_directory):
-            if filename.endswith(".py") and not filename.startswith("_"):
-                try:
-                    module_name = filename[:-3]
-                    module_path = os.path.join(agent_directory, filename)
-                    spec = importlib.util.spec_from_file_location(
-                        module_name, module_path
-                    )
-                    module = importlib.util.module_from_spec(spec)
-                    spec.loader.exec_module(module)
-                    for attribute_name in dir(module):
-                        attribute = getattr(module, attribute_name)
-                        if (
-                            isinstance(attribute, type)
-                            and issubclass(attribute, BaseAgent)
-                            and attribute is not BaseAgent
-                        ):
-                            agents.append(attribute())
-                except Exception as e:
-                    print(f"Error loading agent from {filename}: {e}")
-        return agents
+    def query_agents(self, **kwargs):
+        try:
+            agents = Agent.select().where(**kwargs)
+            return [agent for agent in agents]
+        except Agent.DoesNotExist:
+            print(f"Agents with query {kwargs} do not exist.")
+            return None
+
+    def update_agent(self, agent_id, **kwargs):
+        try:
+            with db.atomic():
+                agent = Agent.get(Agent.agent_id == agent_id)
+                agent.update(**kwargs).where(Agent.agent_id == agent_id).execute()
+            return self.get_agent(agent_id)
+        except Agent.DoesNotExist:
+            print(f"Agent with ID {agent_id} does not exist.")
+            return None
+        except Exception as e:
+            print(f"Error updating agent: {e}")
+            return None
+
+    def delete_agent(self, agent_id):
+        try:
+            with db.atomic():
+                agent = Agent.get(Agent.agent_id == agent_id)
+                agent.delete_instance()
+            return True
+        except Agent.DoesNotExist:
+            print(f"Agent with ID {agent_id} does not exist.")
+            return False
+
+    def list_agents(self):
+        agents = Agent.select()
+        return [agent for agent in agents]
+
+    def manage_agent(self, agent_id, action, **kwargs):
+        """
+        Manage an agent by performing specific actions.
+        Actions can be: 'create', 'update', 'delete'
+        """
+        if action == "create":
+            return self.create_agent(**kwargs)
+        elif action == "update":
+            return self.update_agent(agent_id, **kwargs)
+        elif action == "delete":
+            return self.delete_agent(agent_id)
+        elif action == "get":
+            return self.get_agent(agent_id)
+        else:
+            print(f"Invalid action: {action}")
+            return None
+
+
+# # Usage Example
+# if __name__ == "__main__":
+#     db = SqliteDatabase('agents.db')
+#     agent_manager = AgentManager(db)
+
+#     # Create a new agent
+#     agent_data = {
+#         "agent_id": "001",
+#         "name": "Example Agent",
+#         "instructions": "Example instructions",
+#         "engine": "gpt-3.5",
+#         "engine_settings": "{}",
+#         "actions": "{}",
+#         "memory": "{}",
+#         "knowledge": "{}",
+#         "evaluation": "{}",
+#         "feedback": "{}",
+#         "reasoning": "{}",
+#         "planning": "{}",
+#         "thought_template": 1  # Assuming ThoughtTemplate with ID 1 exists
+#     }
+#     new_agent = agent_manager.create_agent(**agent_data)
+#     print(f"Created agent: {new_agent}")
+
+#     # List all agents
+#     agents = agent_manager.list_agents()
+#     print(f"Agents: {agents}")

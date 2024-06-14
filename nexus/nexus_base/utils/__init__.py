@@ -4,6 +4,7 @@ import hashlib
 import re
 import threading
 from queue import Queue
+from time import time
 
 
 def async_to_sync_generator(async_gen):
@@ -45,6 +46,7 @@ def async_to_sync_generator(async_gen):
 
 def id_hash(input_string, length=10):
     # Hash the input string using SHA-256
+    input_string += str(int(time()))
     hash_obj = hashlib.sha256(input_string.encode("utf-8"))
     hash_digest = hash_obj.digest()
 

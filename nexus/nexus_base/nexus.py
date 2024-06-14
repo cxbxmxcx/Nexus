@@ -3,6 +3,7 @@ from datetime import datetime
 from peewee import *
 
 from nexus.nexus_base.action_manager import ActionManager
+from nexus.nexus_base.agent_engine_manager import AgentEngineManager
 from nexus.nexus_base.agent_manager import AgentManager
 from nexus.nexus_base.assistants_manager import AssistantsManager
 from nexus.nexus_base.context_variables import (
@@ -25,15 +26,14 @@ from nexus.nexus_base.nexus_models import (
 )
 from nexus.nexus_base.profile_manager import ProfileManager
 from nexus.nexus_base.thought_template_manager import ThoughtTemplateManager
-from nexus.nexus_base.tracking_manager import TrackingManager
+from nexus.nexus_base.utils import id_hash
 
 
 class Nexus:
     def __init__(self):
-        self.tracking_manager = TrackingManager()
-
-        self.agent_manager = AgentManager(self.tracking_manager)
-        self.load_agents()
+        self.agent_engine_manager = AgentEngineManager()
+        # self.load_agents()
+        self.agent_manager = AgentManager()
 
         self.assistants_manager = AssistantsManager()
 
@@ -104,9 +104,6 @@ class Nexus:
             thread_id, assistant_id, user_input
         )
 
-    def create_agent(self, agent_name, agent_profile):
-        return self.agent_manager.create_agent(agent_name, agent_profile)
-
     def load_profiles(self):
         profiles = self.profile_manager.agent_profiles
         print(f"Loaded {len(profiles)} profiles.")
@@ -126,33 +123,34 @@ class Nexus:
         print(f"Loaded {len(actions)} actions.")
         return actions
 
-    def load_agents(self):
-        agents = self.agent_manager.get_agent_names()
-        avatars = ["🤖", "🧠", "🧮", "⚙️", "🔮"]  # more than 5 agents add more icons
-        avatars.reverse()  # better emojis at the start
-        for agent in agents:
-            participant = (
-                ChatParticipants.select()
-                .where(ChatParticipants.username == agent)
-                .first()
-            )
-            if not participant:
-                self.add_participant(
-                    agent,
-                    participant_type="agent",
-                    display_name=agent,
-                    avatar=avatars.pop(),
-                )
+    def load_agent_engines(self):
+        pass
+        # agents = self.agent_manager.get_agent_names()
+        # avatars = ["🤖", "🧠", "🧮", "⚙️", "🔮"]  # more than 5 agents add more icons
+        # avatars.reverse()  # better emojis at the start
+        # for agent in agents:
+        #     participant = (
+        #         ChatParticipants.select()
+        #         .where(ChatParticipants.username == agent)
+        #         .first()
+        #     )
+        #     if not participant:
+        #         self.add_participant(
+        #             agent,
+        #             participant_type="agent",
+        #             display_name=agent,
+        #             avatar=avatars.pop(),
+        #         )
 
-    def get_agent(self, agent_name):
-        agent = self.agent_manager.get_agent(agent_name)
-        if not agent:
-            raise ValueError(f"Agent '{agent_name}' not found.")
-        agent.actions = self.action_manager.get_actions()
-        return agent
+    def get_agent_engine(self, agent_engine_name):
+        engine = self.agent_engine_manager.get_agent_engine(agent_engine_name)
+        if not engine:
+            raise ValueError(f"Agent engine '{agent_engine_name}' not found.")
+        # agent.actions = self.action_manager.get_actions()
+        return engine
 
-    def get_agent_names(self):
-        return self.agent_manager.get_agent_names()
+    def get_agent_engine_names(self):
+        return self.agent_engine_manager.get_agent_engine_names()
 
     def get_action_names(self):
         return [action["name"] for action in self.actions]
@@ -205,11 +203,11 @@ class Nexus:
         return [user.username for user in users]
 
     def create_thread(self, title, participant_id, type="agent"):
-        thread_id = title
         if type == "assistants":
             thread = self.assistants_manager.create_thread()
             thread_id = thread.id
         with db.atomic():
+            thread_id = f"thread_{id_hash(title)}"
             thread = Thread.create(thread_id=thread_id, title=title, type=type)
             Subscriber.create(participant=participant_id, thread=thread)
             return thread
@@ -243,13 +241,24 @@ class Nexus:
             )
             query.execute()
 
-    def post_message(self, thread_id, participant_id, role, content):
+    def post_message(self, thread_id, participant_id, role, content, attachments=None):
+        def truncate(content, length=30):
+            if len(content) > length:
+                return content[:length] + "..."
+            return content
+
         with db.atomic():
+            msg_count = Message.select().where(Message.thread == thread_id).count()
+            if msg_count == 0:
+                thread = Thread.get(Thread.thread_id == thread_id)
+                thread.title = truncate(content)
+                thread.save()
             message = Message.create(
                 thread=thread_id,
                 author=participant_id,
                 content=content,
                 role=role,
+                attachments=attachments,
                 timestamp=datetime.now(),
             )
             subscribers = Subscriber.select().where(Subscriber.thread == thread_id)
@@ -538,3 +547,34 @@ class Nexus:
 
     def get_tracking_usage(self):
         return self.tracking_manager.get_tracking_usage()
+
+    def list_agents(self):
+        return self.agent_manager.list_agents()
+
+    def create_agent(self, **kwargs):
+        return self.agent_manager.create_agent(**kwargs)
+
+    def get_agent(self, agent_id):
+        return self.agent_manager.get_agent(agent_id)
+
+    def get_agent_by_name(self, name):
+        return self.agent_manager.get_agent_by_name(name)
+
+    def query_agents(self, **kwargs):
+        return self.agent_manager.query_agents(**kwargs)
+
+    def update_agent(self, agent_id, **kwargs):
+        return self.agent_manager.update_agent(agent_id, **kwargs)
+
+    def delete_agent(self, agent_id):
+        return self.agent_manager.delete_agent(agent_id)
+
+    def run_stream(self, thread_id, agent):
+        messages = self.read_messages(thread_id)
+        messages = [
+            {"role": message.role, "content": message.content} for message in messages
+        ]
+        engine = self.get_agent_engine(agent.engine)
+        # engine.configure(agent.engine_settings)
+
+        return engine.run_stream(messages)

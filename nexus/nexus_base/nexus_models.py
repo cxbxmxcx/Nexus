@@ -44,6 +44,61 @@ class AgentEngineUsage(BaseModel):
         }
 
 
+class ThoughtTemplate(BaseModel):
+    name = CharField(unique=True)
+    description = TextField(null=True)
+    args = TextField(null=True)
+    content = TextField()
+
+
+# Agents consist of:
+# - ID
+# - Name
+# - Instructions
+# - Engine
+# - Actions
+# - Memory
+# - Knowledge
+# - Evaluation
+# - Feedback
+# - Reasoning
+# - Planning
+# - Thought template
+class Agent(BaseModel):
+    agent_id = CharField(primary_key=True)
+    name = CharField()
+    instructions = TextField(null=True)
+    engine = CharField()
+    engine_settings = TextField()
+    actions = TextField()
+    memory = TextField(null=True)
+    knowledge = TextField(null=True)
+    evaluation = TextField(null=True)
+    feedback = TextField(null=True)
+    reasoning = TextField(null=True)
+    planning = TextField(null=True)
+    thought_template = TextField(null=True)
+    timestamp = DateTimeField(constraints=[SQL("DEFAULT CURRENT_TIMESTAMP")])
+
+    def to_dict(self):
+        return {
+            "agent_id": self.agent_id,
+            "name": self.name,
+            "instructions": self.instructions,
+            "engine": self.engine,
+            "engine_settings": self.engine_settings,
+            "actions": self.actions,
+            "memory": self.memory,
+            "knowledge": self.knowledge,
+            "evaluation": self.evaluation,
+            "feedback": self.feedback,
+            "reasoning": self.reasoning,
+            "planning": self.planning,
+            "thought_template": self.thought_template.to_dict(),
+            "timestamp": self.timestamp.strftime("%Y-%m-%d %H:%M:%S"),
+        }
+
+
 class ChatParticipants(BaseModel):
     user_id = CharField(primary_key=True)
     username = CharField(unique=True)
@@ -72,7 +127,7 @@ class ChatParticipants(BaseModel):
 
 class Thread(BaseModel):
     thread_id = CharField(primary_key=True)
-    title = CharField(unique=True)
+    title = CharField()
     type = CharField()
     timestamp = DateTimeField(constraints=[SQL("DEFAULT CURRENT_TIMESTAMP")])
 
@@ -90,6 +145,7 @@ class Message(BaseModel):
     author = ForeignKeyField(ChatParticipants, backref="messages")
     role = CharField()  # user, agent, system
     content = TextField()
+    attachments = TextField(null=True)
     timestamp = DateTimeField(constraints=[SQL("DEFAULT CURRENT_TIMESTAMP")])
 
     def to_dict(self):
@@ -98,6 +154,7 @@ class Message(BaseModel):
             "author": self.author.username,
             "role": self.role,
             "content": self.content,
+            "attachments": self.attachments,
             "timestamp": self.timestamp.strftime("%Y-%m-%d %H:%M:%S"),
         }
 
@@ -155,13 +212,6 @@ class Document(BaseModel):
     name = CharField()
 
 
-class ThoughtTemplate(BaseModel):
-    name = CharField(unique=True)
-    description = TextField(null=True)
-    args = TextField(null=True)
-    content = TextField()
-
-
 def initialize_db():
     db.connect()
     db.create_tables(
@@ -177,6 +227,7 @@ def initialize_db():
             ThoughtTemplate,
             MemoryStore,
             MemoryFunction,
+            Agent,
         ],
         safe=True,
     )

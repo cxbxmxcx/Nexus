@@ -1,16 +1,15 @@
 import json
-import os
 
 from dotenv import load_dotenv
-from openai import AzureOpenAI
+from openai import OpenAI
 
-from nexus.nexus_base.agent_manager import BaseAgent
+from nexus.nexus_base.agent_engine_manager import BaseAgentEngine
 from nexus.nexus_base.nexus_models import Message
 
 load_dotenv()  # loading and setting the api key can be done in one step
 
 
-class AzureOpenAIAgent(BaseAgent):
+class OpenAIAgentEngine(BaseAgentEngine):
     _supports_actions = True
     _supports_knowledge = True
     _supports_memory = True
@@ -19,14 +18,9 @@ class AzureOpenAIAgent(BaseAgent):
         super().__init__(chat_history)
         self.last_message = ""
         self._chat_history = chat_history
-        self.client = AzureOpenAI(
-            api_key=os.getenv("AZURE_OPENAI_API_KEY"),
-            api_version=os.getenv("AZURE_OPENAI_API_VERSION"),
-            azure_endpoint=os.getenv("AZURE_OPENAI_ENDPOINT"),
-        )
+        self.client = OpenAI()
         self.client.models.list()
-        self.model = "gpt-4-v0613"
-
+        self.model = "gpt-4o"
         self.max_tokens = 1024
         self.temperature = 0.7
         self.messages = []  # history of messages
@@ -36,12 +30,15 @@ class AzureOpenAIAgent(BaseAgent):
             "model",
             {
                 "type": "string",
-                "default": "gpt-4-v0613",
+                "default": "gpt-4-1106-preview",
                 "options": [
-                    "gpt-4-v0613",
-                    "gpt-4-32k-v0613",
-                    "gpt-35-turbo-v0613",
-                    "gpt-4-v1106-Preview",
+                    "gpt-4o",
+                    "gpt-4-1106-preview",
+                    "gpt-3.5-turbo-1106",
+                    "gpt-4-0613",
+                    "gpt-4",
+                    "gpt-4-0125-preview",
+                    "gpt-4-turbo-preview",
                 ],
             },
         )
@@ -65,6 +62,17 @@ class AzureOpenAIAgent(BaseAgent):
                 "step": 10,
             },
         )
+
+    def run_stream(self, messages):
+        response = self.client.chat.completions.create(
+            model="gpt-4o", messages=messages, temperature=1.0, stream=True
+        )
+
+        partial_message = ""
+        for chunk in response:
+            if chunk.choices[0].delta.content is not None:
+                partial_message += chunk.choices[0].delta.content
+                yield partial_message
 
     async def get_response(self, user_input, thread_id=None):
         self.messages += [{"role": "user", "content": user_input}]

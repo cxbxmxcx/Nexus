@@ -3,13 +3,13 @@ import os
 from dotenv import load_dotenv
 from groq import Groq
 
-from nexus.nexus_base.agent_manager import BaseAgent
+from nexus.nexus_base.agent_engine_manager import BaseAgentEngine
 from nexus.nexus_base.nexus_models import Message
 
 load_dotenv()  # loading and setting the api key can be done in one step
 
 
-class GroqAgent(BaseAgent):
+class GroqAgent(BaseAgentEngine):
     _supports_actions = False
     _supports_knowledge = True
     _supports_memory = True
@@ -82,6 +82,34 @@ class GroqAgent(BaseAgent):
         )
         # how can I capture response.usage or the whole response object?
         return str(response.choices[0].message.content)
+
+    # def run_stream(self, messages):
+    #     self.messages = messages
+    #     response = self.client.chat.completions.create(
+    #         model=self.model,
+    #         messages=self.messages,
+    #         temperature=self.temperature,
+    #     )
+    #     self.last_message = str(response)
+    #     response = self.client.chat.completions.create(
+    #         model="gpt-4o", messages=messages, temperature=1.0, stream=True
+    #     )
+
+    #     partial_message = ""
+    #     for chunk in response:
+    #         if chunk.choices[0].delta.content is not None:
+    #             partial_message = partial_message + chunk.choices[0].delta.content
+    #             yield partial_message
+    def run_stream(self, messages):
+        response = self.client.chat.completions.create(
+            model="mixtral-8x7b-32768", messages=messages, temperature=1.0, stream=True
+        )
+
+        partial_message = ""
+        for chunk in response:
+            if chunk.choices[0].delta.content is not None:
+                partial_message += chunk.choices[0].delta.content
+                yield partial_message
 
     def get_response_stream(self, user_input, thread_id=None):
         self.last_message = ""

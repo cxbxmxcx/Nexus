@@ -3,13 +3,13 @@ import os
 from anthropic import Anthropic
 from dotenv import load_dotenv
 
-from nexus.nexus_base.agent_manager import BaseAgent
+from nexus.nexus_base.agent_engine_manager import BaseAgentEngine
 from nexus.nexus_base.nexus_models import Message
 
 load_dotenv()  # loading and setting the api key can be done in one step
 
 
-class AnthropicAgent(BaseAgent):
+class AnthropicAgentEngine(BaseAgentEngine):
     _supports_actions = (
         False  # anthropic tool use is still in alpha, not going to touch it yet
     )
