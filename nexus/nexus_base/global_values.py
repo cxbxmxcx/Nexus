@@ -4,6 +4,7 @@ import os
 class GlobalValues:
     AGENTS_WORKING_FOLDER = "agent_working_folder"
     AGENT_ENGINES_FOLDER = "nexus_agent_engines"
+    ACTIONS_FOLDERS = ["nexus_actions"]
 
     @classmethod
     def set_value(cls, var_name, value):

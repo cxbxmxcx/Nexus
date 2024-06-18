@@ -41,8 +41,6 @@ def load_threads(nexus):
 
 def create_new_thread(username, nexus):
     thread = nexus.create_thread("New thread", username, type="agent")
-    # return (thread.thread_id, thread.title), thread.thread_id, ""
-    # return thread_dropdown.update(choices=[t[1] for t in load_threads(nexus)]
     return (
         gr.update(choices=list(load_threads(nexus)), value=thread.thread_id),
         thread.thread_id,

@@ -1,7 +1,11 @@
 Error loading agent from azure_oai_engine.py: Must provide either the `api_version` argument or the `OPENAI_API_VERSION` environment variable
-Loaded 5 actions.
+Loaded 19 actions.
 Loaded 4 profiles.
+Installed packages from code_env_requirements.txt
 Running on local URL:  http://127.0.0.1:7860
 
 To create a public link, set `share=True` in `launch()`.
 main logged in successfully.
+Running stream for Fred using engine OpenAIAgentEngine.
+Calling function: search_youtube_videos with args: {'query': 'AI Agents', 'max_results': '5', 'publish_time': 'this month'}
+--- Function response: [{'title': 'Have You Picked the Wrong AI Agent Framework?', 'id': 'jLVl5V8roMU'}, {'title': 'New AI Agent, GPT-5 Not That Good? 100 Billion Humanoid Robots, Mixutre Of AGENTS And More', 'id': '_MWfbCwlKfM'}, {'title': 'Building AI Agents from Scratch; Simplified', 'id': 'QKNVPHm3G70'}, {'title': 'How We Created First Fully Autonomous Business With AI', 'id': '7jwjSiYmAMU'}, {'title': 'LangChain’s Harrison Chase on Building the Orchestration Layer for AI Agents', 'id': '6XZLoW0-mPY'}]

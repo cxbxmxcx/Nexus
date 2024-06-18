@@ -4666,6 +4666,20 @@ idna = ">=2.0"
 multidict = ">=4.0"
 
 [[package]]
+name = "youtube-transcript-api"
+version = "0.6.2"
+description = "This is an python API which allows you to get the transcripts/subtitles for a given YouTube video. It also works for automatically generated subtitles, supports translating subtitles and it does not require a headless browser, like other selenium based solutions do!"
+optional = false
+python-versions = "*"
+files = [
+    {file = "youtube_transcript_api-0.6.2-py3-none-any.whl", hash = "sha256:019dbf265c6a68a0591c513fff25ed5a116ce6525832aefdfb34d4df5567121c"},
+    {file = "youtube_transcript_api-0.6.2.tar.gz", hash = "sha256:cad223d7620633cec44f657646bffc8bbc5598bd8e70b1ad2fa8277dec305eb7"},
+]
+
+[package.dependencies]
+requests = "*"
+
+[[package]]
 name = "zipp"
 version = "3.18.1"
 description = "Backport of pathlib-compatible object wrapper for zip files"
@@ -4683,4 +4697,4 @@ testing = ["big-O", "jaraco.functools", "jaraco.itertools", "more-itertools", "p
 [metadata]
 lock-version = "2.0"
 python-versions = "^3.10"
-content-hash = "ae31dbdceb16c374246fcb4336cf3bcecc491bf46ae9b8e066af92f79639e300"
+content-hash = "1d15c71d10245ef0472845afedd89ba6813ee64ae75b8cb78b0d3cace42fd281"

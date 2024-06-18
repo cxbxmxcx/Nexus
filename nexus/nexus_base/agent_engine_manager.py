@@ -1,4 +1,5 @@
 import importlib.util
+import json
 import os
 
 from nexus.nexus_base.global_values import GlobalValues
@@ -14,19 +15,53 @@ class BaseAgentEngine:
         self.last_message = ""
         self._actions = []
         self._profile = None
-        self.attribute_options = {}
+        self.engine_setting_options = {}
+        self.engine_settings = {}
 
-    def add_attribute_options(self, name, details):
-        """Add or update an attribute with its details."""
-        self.attribute_options[name] = details
+    def add_engine_setting_option(self, name, details):
+        """Add or update an engine setting with its details."""
+        self.engine_setting_options[name] = details
 
-    def get_attribute_option(self, name):
-        """Get options or constraints for a given attribute."""
-        return self.attribute_options.get(name, None)
+    def get_engine_setting_option(self, name):
+        """Get settings or constraints for a given setting."""
+        return self.engine_setting_options.get(name, None)
 
-    def get_attribute_options(self):
-        """Get all attribute options."""
-        return self.attribute_options
+    def get_engine_setting_options(self):
+        """Get all engine settings."""
+        return self.engine_setting_options
+
+    def configure_engine_settings(self, settings):
+        """Configure the engine based on the settings provided"""
+        if isinstance(settings, str):
+            settings = json.loads(settings)
+        for setting, value in settings.items():
+            if hasattr(self, setting):
+                setattr(self, setting, value)  # Set the attribute value
+                self.engine_settings[setting] = value  # Update the engine settings
+
+    def get_engine_settings(self):
+        """Get all engine settings."""
+        return self.engine_settings
+
+    def inject_system_message(self, messages, system_message):
+        """
+        Insert the system message as the second item in the messages list.
+
+        Args:
+        messages (list): List of message dictionaries.
+        system_message (dict): The message content to be inserted.
+
+        Returns:
+        list: Updated list of messages with the system message inserted.
+        """
+        system_message = {"role": "system", "content": system_message}
+        # Ensure the messages list is not empty
+        if not messages:
+            return [system_message]
+
+        # Insert the system message as the second item
+        messages.insert(1, system_message)
+        return messages
 
     async def get_response(self, user_input, thread_id=None):
         # Placeholder method to be implemented by subclasses
@@ -36,7 +71,7 @@ class BaseAgentEngine:
         # Placeholder method to be implemented by subclasses
         raise NotImplementedError("This method should be implemented by subclasses.")
 
-    def run_stream(self, messages):
+    def run_stream(self, system, messages):
         # Placeholder method for streaming responses, to be implemented by subclasses
         raise NotImplementedError("This method should be implemented by subclasses.")
 
@@ -188,6 +223,18 @@ class AgentEngineManager:
 
     def get_agent_engine_names(self):
         return [engine.name for engine in self.agent_engines]
+
+    def get_agent_engine_options_defaults(self, engine_name):
+        engine = self.get_agent_engine(engine_name)
+        eso = engine.get_engine_setting_options()
+
+        options = {}
+        defaults = {}
+        for key, value in eso.items():
+            options[key] = {k: v for k, v in value.items()}
+            defaults[key] = value["default"]
+
+        return options, defaults
 
     def _load_agent_engines(self, agent_engine_folder):
         agents = []

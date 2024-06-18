@@ -10,6 +10,7 @@ from nexus.nexus_base.context_variables import (
     tracking_function_context,
     tracking_id_context,
 )
+from nexus.nexus_base.environment_manager import EnvironmentManager
 from nexus.nexus_base.knowledge_manager import KnowledgeManager
 from nexus.nexus_base.memory_manager import MemoryManager
 from nexus.nexus_base.nexus_models import (
@@ -45,6 +46,9 @@ class Nexus:
 
         self.knowledge_manager = KnowledgeManager()
         self.memory_manager = MemoryManager()
+
+        self.environment_manager = EnvironmentManager()
+        self.environment_manager.install_requirements()
 
         self.thought_template_manager = ThoughtTemplateManager(self)
 
@@ -142,12 +146,17 @@ class Nexus:
         #             avatar=avatars.pop(),
         #         )
 
-    def get_agent_engine(self, agent_engine_name):
-        engine = self.agent_engine_manager.get_agent_engine(agent_engine_name)
+    def get_agent_engine(self, agent):
+        if agent is None or agent.engine is None:
+            return None
+        engine = self.agent_engine_manager.get_agent_engine(agent.engine)
         if not engine:
-            raise ValueError(f"Agent engine '{agent_engine_name}' not found.")
+            raise ValueError(f"Agent engine '{agent.engine}' not found.")
         # agent.actions = self.action_manager.get_actions()
         return engine
+
+    def get_agent_engine_options_defaults(self, engine_name):
+        return self.agent_engine_manager.get_agent_engine_options_defaults(engine_name)
 
     def get_agent_engine_names(self):
         return self.agent_engine_manager.get_agent_engine_names()
@@ -574,7 +583,10 @@ class Nexus:
         messages = [
             {"role": message.role, "content": message.content} for message in messages
         ]
-        engine = self.get_agent_engine(agent.engine)
+        engine = self.get_agent_engine(agent)
+        selected_actions = self.get_actions(agent.actions)
+        engine.actions = selected_actions
+        engine.configure_engine_settings(agent.engine_settings)
         # engine.configure(agent.engine_settings)
-
-        return engine.run_stream(messages)
+        print(f"Running stream for {agent.name} using engine {agent.engine}.")
+        return engine.run_stream(agent.instructions, messages)

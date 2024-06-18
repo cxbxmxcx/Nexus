@@ -31,7 +31,7 @@ class AnthropicAgentEngine(BaseAgentEngine):
         self.tools = []
         self.system = ""
 
-        self.add_attribute_options(
+        self.add_engine_setting_option(
             "model",
             {
                 "type": "string",
@@ -43,7 +43,7 @@ class AnthropicAgentEngine(BaseAgentEngine):
                 ],
             },
         )
-        self.add_attribute_options(
+        self.add_engine_setting_option(
             "temperature",
             {
                 "type": "numeric",
@@ -53,7 +53,17 @@ class AnthropicAgentEngine(BaseAgentEngine):
                 "step": 0.1,
             },
         )
-        self.add_attribute_options(
+        self.add_engine_setting_option(
+            "top_p",
+            {
+                "type": "numeric",
+                "default": 1.0,
+                "min": 0.0,
+                "max": 1.0,
+                "step": 0.1,
+            },
+        )
+        self.add_engine_setting_option(
             "max_tokens",
             {
                 "type": "numeric",

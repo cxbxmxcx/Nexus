@@ -23,14 +23,15 @@ class OpenAIAgentEngine(BaseAgentEngine):
         self.model = "gpt-4o"
         self.max_tokens = 1024
         self.temperature = 0.7
+        self.top_p = 1.0
         self.messages = []  # history of messages
         self.tools = []
 
-        self.add_attribute_options(
+        self.add_engine_setting_option(
             "model",
             {
                 "type": "string",
-                "default": "gpt-4-1106-preview",
+                "default": "gpt-4o",
                 "options": [
                     "gpt-4o",
                     "gpt-4-1106-preview",
@@ -42,17 +43,27 @@ class OpenAIAgentEngine(BaseAgentEngine):
                 ],
             },
         )
-        self.add_attribute_options(
+        self.add_engine_setting_option(
             "temperature",
             {
                 "type": "numeric",
                 "default": 0.7,
                 "min": 0.0,
+                "max": 2.0,
+                "step": 0.1,
+            },
+        )
+        self.add_engine_setting_option(
+            "top_p",
+            {
+                "type": "numeric",
+                "default": 1.0,
+                "min": 0.0,
                 "max": 1.0,
                 "step": 0.1,
             },
         )
-        self.add_attribute_options(
+        self.add_engine_setting_option(
             "max_tokens",
             {
                 "type": "numeric",
@@ -62,17 +73,6 @@ class OpenAIAgentEngine(BaseAgentEngine):
                 "step": 10,
             },
         )
-
-    def run_stream(self, messages):
-        response = self.client.chat.completions.create(
-            model="gpt-4o", messages=messages, temperature=1.0, stream=True
-        )
-
-        partial_message = ""
-        for chunk in response:
-            if chunk.choices[0].delta.content is not None:
-                partial_message += chunk.choices[0].delta.content
-                yield partial_message
 
     async def get_response(self, user_input, thread_id=None):
         self.messages += [{"role": "user", "content": user_input}]
@@ -95,6 +95,100 @@ class OpenAIAgentEngine(BaseAgentEngine):
             temperature=self.temperature,
         )
         return str(response.choices[0].message.content)
+
+    def run_stream(self, system, messages):
+        # Inject system message if present
+        if system:
+            self.inject_system_message(messages, system)
+
+        # self.last_message = ""
+        # self.messages += [{"role": "user", "content": user_input}]
+
+        if self.tools and len(self.tools) > 0:
+            response = self.client.chat.completions.create(
+                model=self.model,
+                messages=messages,
+                temperature=self.temperature,
+                tools=self.tools,
+                tool_choice="auto",  # auto is default, but we'll be explicit
+            )
+        else:
+            response = self.client.chat.completions.create(
+                model=self.model,
+                messages=messages,
+                temperature=self.temperature,
+                stream=True,  # Stream the response
+            )
+
+            partial_message = ""
+            for chunk in response:
+                if chunk.choices[0].delta.content is not None:
+                    partial_message += chunk.choices[0].delta.content
+                    yield partial_message
+            return  # Exit the function since streaming is complete
+
+        response_message = response.choices[0].message
+        tool_calls = response_message.tool_calls
+
+        # Check if the model wanted to call a function
+        if tool_calls:
+            available_functions = {
+                action["name"]: action["pointer"] for action in self.actions
+            }
+            messages.append(
+                response_message
+            )  # Extend conversation with assistant's reply
+
+            # Call the function(s)
+            for tool_call in tool_calls:
+                function_name = tool_call.function.name
+                function_to_call = available_functions[function_name]
+                function_args = json.loads(tool_call.function.arguments)
+                print(f"Calling function: {function_name} with args: {function_args}")
+
+                function_response = function_to_call(
+                    **function_args, _caller_agent=self
+                )
+                print(f"--- Function response: {function_response}")
+
+                messages.append(
+                    {
+                        "tool_call_id": tool_call.id,
+                        "role": "tool",
+                        "name": function_name,
+                        "content": str(function_response),
+                    }
+                )  # Extend conversation with function response
+
+            second_response = self.client.chat.completions.create(
+                model=self.model,
+                messages=messages,
+                temperature=self.temperature,
+                max_tokens=self.max_tokens,
+            )  # Get a new response from the model where it can see the function response
+            response_message = second_response.choices[0].message
+
+        last_response = str(response_message.content)
+        msg = ""
+        for character in last_response:
+            msg += character
+            yield msg
+
+        return
+
+    def run_stream_old(self, system, messages):
+        if system:
+            self.inject_system_message(messages, system)
+
+        response = self.client.chat.completions.create(
+            model="gpt-4o", messages=messages, temperature=1.0, stream=True
+        )
+
+        partial_message = ""
+        for chunk in response:
+            if chunk.choices[0].delta.content is not None:
+                partial_message += chunk.choices[0].delta.content
+                yield partial_message
 
     def get_response_stream(self, user_input, thread_id=None):
         self.last_message = ""

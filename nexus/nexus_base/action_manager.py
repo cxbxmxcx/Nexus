@@ -4,6 +4,8 @@ import importlib.util
 import inspect
 import os
 
+from nexus.nexus_base.global_values import GlobalValues
+
 
 def handle_semantic_function_call(prompt, agent):
     system, user = parse_prompt(prompt)
@@ -57,7 +59,12 @@ def agent_action(func):
             return handle_semantic_function_call(prompt, _caller_agent)
         else:
             # Proceed with the original call
-            return func(*args, **kwargs)
+            try:
+                return func(*args, **kwargs)
+            except Exception as e:
+                msg = f"Error in function '{func.__name__}': {e}"
+                print(msg)
+                return msg
 
     # Inspect the function's signature
     sig = inspect.signature(func)
@@ -114,7 +121,7 @@ def agent_action(func):
 class ActionManager:
     def __init__(self):
         self.actions = []  # Initialize an empty list to store actions
-        self.actions_folder = os.path.join(os.path.dirname(__file__), "nexus_actions")
+        self.actions_folders = GlobalValues.ACTIONS_FOLDERS
         self.collect_and_update_actions()
 
     def add_action(self, action):
@@ -128,17 +135,21 @@ class ActionManager:
     def collect_and_update_actions(self):
         """Collect and update actions with function pointers from Python files in the specified folder."""
         self.actions = []  # Reset actions list to ensure it's fresh on each call
-        for root, dirs, files in os.walk(self.actions_folder):
-            for file in files:
-                if file.endswith(".py"):
-                    full_path = os.path.join(root, file)
-                    with open(full_path, "r", encoding="utf-8") as f:
-                        file_contents = f.read()
-                    self.actions.extend(
-                        self.inspect_file_for_decorated_actions(
-                            file_contents, full_path
+        for folder in self.actions_folders:
+            if not os.path.isabs(folder):
+                folder = os.path.join(os.path.dirname(__file__), folder)
+
+            for root, dirs, files in os.walk(folder):
+                for file in files:
+                    if file.endswith(".py"):
+                        full_path = os.path.join(root, file)
+                        with open(full_path, "r", encoding="utf-8") as f:
+                            file_contents = f.read()
+                        self.actions.extend(
+                            self.inspect_file_for_decorated_actions(
+                                file_contents, full_path
+                            )
                         )
-                    )
 
     def inspect_file_for_decorated_actions(self, file_contents, full_path):
         """Inspect file contents for functions decorated with `agent_action` and load them."""

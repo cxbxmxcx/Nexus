@@ -1,15 +1,9 @@
-import threading
+import json
 
 import gradio as gr
 
+from nexus.gradio_ui.engine_settings_panel import engine_settings_panel
 from nexus.nexus_base.nexus import Nexus
-
-# from playground.agents_api import api
-# from playground.agents_utils import (
-#     get_actions_by_name,
-#     get_tools,
-#     get_tools_by_name,
-# )
 
 # Agents consist of:
 # - Name
@@ -26,7 +20,6 @@ from nexus.nexus_base.nexus import Nexus
 # - Reasoning
 # - Planning
 # - Thought process ???
-debounce_timer = None
 
 
 def agents_panel(nexus: Nexus):
@@ -99,12 +92,23 @@ def agents_panel(nexus: Nexus):
             interactive=True,
             value=agent_engine_options[0],
         )
-        agent_engine_settings_new = gr.Textbox(
-            label="Engine Settings",
-            placeholder="{}",
-            interactive=True,
-            lines=5,
+        agent_engine_settings_new = engine_settings_panel()
+
+        def update_engine_settings_new(agent_engine):
+            if agent_engine is None:
+                return dict(options={}, settings={})
+            engine_options, defaults = nexus.get_agent_engine_options_defaults(
+                agent_engine
+            )
+            eos = dict(options=engine_options, settings=defaults)
+            return json.dumps(eos, sort_keys=True)
+
+        agent_engine_new.change(
+            fn=update_engine_settings_new,
+            inputs=[agent_engine_new],
+            outputs=[agent_engine_settings_new],
         )
+
         with gr.Accordion("Actions", open=False, elem_id="actionsnew"):
             agent_actions_new = gr.CheckboxGroup(
                 label="Actions", choices=action_choices, interactive=True
@@ -162,11 +166,24 @@ def agents_panel(nexus: Nexus):
             label="Engine",
             choices=agent_engine_options,
         )
-        agent_engine_settings = gr.Textbox(
-            label="Engine Settings",
-            placeholder="{}",
-            lines=5,
+
+        agent_engine_settings = engine_settings_panel()
+
+        def update_engine_settings(agent_engine):
+            if agent_engine is None:
+                return dict(options={}, settings={})
+            engine_options, defaults = nexus.get_agent_engine_options_defaults(
+                agent_engine
+            )
+            eos = dict(options=engine_options, settings=defaults)
+            return json.dumps(eos, sort_keys=True)
+
+        agent_engine.change(
+            fn=update_engine_settings,
+            inputs=[agent_engine],
+            outputs=[agent_engine_settings],
         )
+
         with gr.Accordion("Actions", open=False, elem_id="actions"):
             agent_actions = gr.CheckboxGroup(
                 label="Actions", choices=action_choices, interactive=True
@@ -205,7 +222,13 @@ def agents_panel(nexus: Nexus):
 
     def get_agent_details(agent_key):
         agent_options = list_agents()
+
         if agent_key == CREATE_NEW_AGENT_KEY:
+            default_engine = agent_engine_options[0]
+            options, settings = nexus.get_agent_engine_options_defaults(default_engine)
+            engine_settings = json.dumps(
+                dict(options=options, settings=settings), sort_keys=True
+            )
             return (
                 gr.update(
                     choices=list(agent_options.keys()), value=CREATE_NEW_AGENT_KEY
@@ -213,8 +236,8 @@ def agents_panel(nexus: Nexus):
                 "",
                 "",
                 "",
-                "gpt-4o",
-                "{}",
+                default_engine,
+                engine_settings,
                 [],
                 "{}",
                 "{}",
@@ -231,15 +254,20 @@ def agents_panel(nexus: Nexus):
                 agent_id = agent_key
 
             agent = nexus.get_agent(agent_id)
-
+            settings = json.loads(agent.engine_settings)
+            options, _ = nexus.get_agent_engine_options_defaults(agent.engine)
+            engine_settings = json.dumps(
+                dict(options=options, settings=settings), sort_keys=True
+            )
+            actions = json.loads(agent.actions)
             return (
                 gr.update(choices=list(agent_options.keys()), value=agent.name),
                 agent.name,
                 agent.agent_id,
                 agent.instructions,
                 agent.engine,
-                agent.engine_settings,
-                agent.actions,
+                engine_settings,
+                actions,
                 agent.memory,
                 agent.knowledge,
                 agent.evaluation,
@@ -297,7 +325,10 @@ def agents_panel(nexus: Nexus):
         agent_thought_template,
     ]
 
-    def debounce_update_agent(
+    # Cache for storing the last agent data as a string
+    agent_cache = {}
+
+    def serialize_agent_data(
         agent_name,
         agent_id,
         agent_instructions,
@@ -311,42 +342,48 @@ def agents_panel(nexus: Nexus):
         agent_reasoning,
         agent_planning,
         agent_thought_template,
-        debounce_interval=1,  # debounce interval in seconds
     ):
-        global debounce_timer
+        """Serialize agent data to a JSON string."""
+        return json.dumps(
+            {
+                "name": agent_name,
+                "agent_id": agent_id,
+                "instructions": agent_instructions,
+                "engine": agent_engine,
+                "engine_settings": agent_engine_settings,
+                "actions": agent_actions,
+                "memory": agent_memory,
+                "knowledge": agent_knowledge,
+                "evaluation": agent_evaluation,
+                "feedback": agent_feedback,
+                "reasoning": agent_reasoning,
+                "planning": agent_planning,
+                "thought_template": agent_thought_template,
+            },
+            sort_keys=True,
+        )
 
-        def execute_update():
-            if agent_id is None or agent_id == "" or agent_id == "ID:":
-                return
+    def update_agent(
+        agent_name,
+        agent_id,
+        agent_instructions,
+        agent_engine,
+        agent_engine_settings,
+        agent_actions,
+        agent_memory,
+        agent_knowledge,
+        agent_evaluation,
+        agent_feedback,
+        agent_reasoning,
+        agent_planning,
+        agent_thought_template,
+    ):
+        if agent_id is None or agent_id == "" or len(agent_id) < 10:
+            return
 
-            nexus.update_agent(
-                name=agent_name,
-                agent_id=agent_id,
-                instructions=agent_instructions,
-                engine=agent_engine,
-                engine_settings=agent_engine_settings,
-                actions=agent_actions,
-                memory=agent_memory,
-                knowledge=agent_knowledge,
-                evaluation=agent_evaluation,
-                feedback=agent_feedback,
-                reasoning=agent_reasoning,
-                planning=agent_planning,
-                thought_template=agent_thought_template,
-            )
-
-        # Cancel the previous timer if it exists
-        if debounce_timer is not None:
-            debounce_timer.cancel()
-
-        # Set a new timer
-        debounce_timer = threading.Timer(debounce_interval, execute_update)
-        debounce_timer.start()
-
-    # Bind the debounced update function to the control changes
-    for control in controls:
-        control.change(
-            fn=lambda agent_name,
+        # Serialize the current agent data
+        current_agent_data = serialize_agent_data(
+            agent_name,
             agent_id,
             agent_instructions,
             agent_engine,
@@ -358,61 +395,47 @@ def agents_panel(nexus: Nexus):
             agent_feedback,
             agent_reasoning,
             agent_planning,
-            agent_thought_template: debounce_update_agent(
-                agent_name,
-                agent_id,
-                agent_instructions,
-                agent_engine,
-                agent_engine_settings,
-                agent_actions,
-                agent_memory,
-                agent_knowledge,
-                agent_evaluation,
-                agent_feedback,
-                agent_reasoning,
-                agent_planning,
-                agent_thought_template,
-            ),
+            agent_thought_template,
+        )
+
+        # Check if the agent data is different from the cached data
+        if agent_cache.get(agent_id) == current_agent_data:
+            # No changes detected, skip update
+            return
+
+        # Update the cache
+        agent_cache[agent_id] = current_agent_data
+
+        # Parse the engine settings
+        engine_settings = json.loads(agent_engine_settings)["settings"]
+        engine_settings = json.dumps(engine_settings, sort_keys=True)
+
+        actions = [a for a in agent_actions if a in action_choices]
+        actions = json.dumps(actions, sort_keys=True)
+        # Update the agent
+        agent = nexus.update_agent(
+            name=agent_name,
+            agent_id=agent_id,
+            instructions=agent_instructions,
+            engine=agent_engine,
+            engine_settings=engine_settings,
+            actions=actions,
+            memory=agent_memory,
+            knowledge=agent_knowledge,
+            evaluation=agent_evaluation,
+            feedback=agent_feedback,
+            reasoning=agent_reasoning,
+            planning=agent_planning,
+            thought_template=agent_thought_template,
+        )
+
+    # Bind the debounced update function to the control changes
+    for control in controls:
+        control.change(
+            fn=update_agent,
             inputs=controls,
             outputs=[],
         )
-
-    # def update_agent(
-    #     agent_name,
-    #     agent_id,
-    #     agent_instructions,
-    #     agent_engine,
-    #     agent_engine_settings,
-    #     agent_actions,
-    #     agent_memory,
-    #     agent_knowledge,
-    #     agent_evaluation,
-    #     agent_feedback,
-    #     agent_reasoning,
-    #     agent_planning,
-    #     agent_thought_template,
-    # ):
-    #     if agent_id is None or agent_id == "" or agent_id == "ID:":
-    #         return
-
-    #     nexus.update_agent(
-    #         name=agent_name,
-    #         agent_id=agent_id,
-    #         instructions=agent_instructions,
-    #         engine=agent_engine,
-    #         engine_settings=agent_engine_settings,
-    #         actions=agent_actions,
-    #         memory=agent_memory,
-    #         knowledge=agent_knowledge,
-    #         evaluation=agent_evaluation,
-    #         feedback=agent_feedback,
-    #         reasoning=agent_reasoning,
-    #         planning=agent_planning,
-    #         thought_template=agent_thought_template,
-    #     )
-
-    # for control in controls:
-    #     control.change(fn=update_agent, inputs=controls, outputs=[])
 
     def create_and_select_agent(
         agent_name_new,
@@ -428,12 +451,17 @@ def agents_panel(nexus: Nexus):
         agent_planning_new,
         agent_thought_template_new,
     ):
+        engine_settings = json.dumps(
+            json.loads(agent_engine_settings_new)["settings"], sort_keys=True
+        )
+        actions = [a for a in agent_actions_new if a in action_choices]
+        actions = json.dumps(actions, sort_keys=True)
         agent = nexus.create_agent(
             name=agent_name_new,
             instructions=agent_instructions_new,
             engine=agent_engine_new,
-            engine_settings=agent_engine_settings_new,
-            actions=agent_actions_new,
+            engine_settings=engine_settings,
+            actions=actions,
             memory=agent_memory_new,
             knowledge=agent_knowledge_new,
             evaluation=agent_evaluation_new,
