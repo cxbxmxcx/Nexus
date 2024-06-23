@@ -14,7 +14,7 @@ def save_file(filename, content):
     """
     file_path = os.path.join(GlobalValues.AGENTS_WORKING_FOLDER, filename)
     with open(file_path, "w", encoding="utf-8") as file:
-        file.write(content)
+        file.write(str(content))
     return f"File '{filename}' saved successfully."
 
 

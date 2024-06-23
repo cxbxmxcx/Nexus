@@ -1,3 +1,4 @@
+import json
 from datetime import datetime
 
 from peewee import *
@@ -25,6 +26,7 @@ from nexus.nexus_base.nexus_models import (
     Thread,
     db,
 )
+from nexus.nexus_base.planner_manager import PlannerManager
 from nexus.nexus_base.profile_manager import ProfileManager
 from nexus.nexus_base.thought_template_manager import ThoughtTemplateManager
 from nexus.nexus_base.utils import id_hash
@@ -46,6 +48,8 @@ class Nexus:
 
         self.knowledge_manager = KnowledgeManager()
         self.memory_manager = MemoryManager()
+
+        self.planner_manager = PlannerManager()
 
         self.environment_manager = EnvironmentManager()
         self.environment_manager.install_requirements()
@@ -578,15 +582,85 @@ class Nexus:
     def delete_agent(self, agent_id):
         return self.agent_manager.delete_agent(agent_id)
 
-    def run_stream(self, thread_id, agent):
+    def run_stream(self, thread_id, agent, use_tools=True):
         messages = self.read_messages(thread_id)
         messages = [
             {"role": message.role, "content": message.content} for message in messages
         ]
         engine = self.get_agent_engine(agent)
+
+        if agent.planning is not None and agent.planning != "None":
+            planner = self.get_planner(agent.planning)
+            plan = planner.create_plan(self, agent, messages[-1]["content"])
+
+            if plan is not None:
+                print(f"Plan for {agent.name}: {plan}")
+                output = planner.execute_plan(self, agent, plan)
+                output = dict(plan=plan, output=output)
+                content = f"""
+                You created a plan to solve the goal and executed it.
+                The results are below:
+                {json.dumps(output, default=str)}
+                Please summarize the output and suggest next steps.
+                """
+                plan_output = {
+                    "role": "assistant",
+                    "content": content,
+                }
+                messages.append(plan_output)
+                next_task = {
+                    "role": "user",
+                    "content": "summarize the results and suggest next steps.",
+                }
+                messages.append(next_task)
+                use_tools = False
+
+        engine.configure_engine_settings(agent.engine_settings)
+        selected_actions = self.get_actions(agent.actions)
+        engine.actions = selected_actions
+        # engine.configure(agent.engine_settings)
+        print(f"Running stream for {agent.name} using engine {agent.engine}.")
+        return engine.run_stream(agent.instructions, messages, use_tools=use_tools)
+
+    def execute_prompt(self, agent, prompt):
+        engine = self.get_agent_engine(agent)
         selected_actions = self.get_actions(agent.actions)
         engine.actions = selected_actions
         engine.configure_engine_settings(agent.engine_settings)
-        # engine.configure(agent.engine_settings)
-        print(f"Running stream for {agent.name} using engine {agent.engine}.")
-        return engine.run_stream(agent.instructions, messages)
+        return engine.execute_prompt(prompt)
+
+    def execute_action(self, agent, action_name, args):
+        action = self.action_manager.get_action(action_name)
+        if action is None:
+            # this is an error but we will ask the agent to handle the error
+            prompt = f"""
+            Action '{action_name}' with {args} was not found.
+            Instead of throwing an error try to handle 
+            what the function was supposed to do and return the results
+            """
+            return self.execute_prompt(agent, prompt)
+        function = action["pointer"]
+        return function(**args)
+
+    def execute_task(self, agent, task, context):
+        action_name = task.get("function")
+        task_args = task.get("args", {})
+
+        # Replace argument values with context outputs if needed
+        args = {}
+        for key, value in task_args.items():
+            if isinstance(value, str) and value.startswith("output_"):
+                args[key] = context.get(value, value)
+            else:
+                args[key] = context.get(value, value)
+
+        return self.execute_action(agent, action_name, args)
+
+    def get_planners(self):
+        return self.planner_manager.get_planners()
+
+    def get_planner(self, planner_name):
+        return self.planner_manager.get_planner(planner_name)
+
+    def get_planner_names(self):
+        return self.planner_manager.get_planner_names()

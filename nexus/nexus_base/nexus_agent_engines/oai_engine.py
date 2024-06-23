@@ -96,7 +96,7 @@ class OpenAIAgentEngine(BaseAgentEngine):
         )
         return str(response.choices[0].message.content)
 
-    def run_stream(self, system, messages):
+    def run_stream(self, system, messages, use_tools=True):
         # Inject system message if present
         if system:
             self.inject_system_message(messages, system)
@@ -104,7 +104,7 @@ class OpenAIAgentEngine(BaseAgentEngine):
         # self.last_message = ""
         # self.messages += [{"role": "user", "content": user_input}]
 
-        if self.tools and len(self.tools) > 0:
+        if use_tools and self.tools and len(self.tools) > 0:
             response = self.client.chat.completions.create(
                 model=self.model,
                 messages=messages,
@@ -170,25 +170,33 @@ class OpenAIAgentEngine(BaseAgentEngine):
 
         last_response = str(response_message.content)
         msg = ""
+        continue_stream = False
+        if "CONTINUE" in last_response:
+            last_response = last_response.replace("CONTINUE", "")
+            continue_stream = True
+
         for character in last_response:
             msg += character
             yield msg
 
+        if continue_stream:
+            messages.append({"role": "assistant", "content": last_response})
+            messages.append({"role": "user", "content": "proceed"})
+            generator = self.run_stream(None, messages, use_tools)
+            for response in generator:
+                yield response
         return
 
-    def run_stream_old(self, system, messages):
-        if system:
-            self.inject_system_message(messages, system)
-
+    def execute_prompt(self, prompt):
+        messages = [{"role": "system", "content": prompt}]
         response = self.client.chat.completions.create(
-            model="gpt-4o", messages=messages, temperature=1.0, stream=True
+            model=self.model,
+            messages=messages,
+            temperature=self.temperature,
+            max_tokens=self.max_tokens,
+            response_format={"type": "json_object"},
         )
-
-        partial_message = ""
-        for chunk in response:
-            if chunk.choices[0].delta.content is not None:
-                partial_message += chunk.choices[0].delta.content
-                yield partial_message
+        return str(response.choices[0].message.content)
 
     def get_response_stream(self, user_input, thread_id=None):
         self.last_message = ""

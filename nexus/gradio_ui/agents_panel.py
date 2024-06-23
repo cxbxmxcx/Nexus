@@ -70,6 +70,7 @@ def agents_panel(nexus: Nexus):
     )
 
     agent_engine_options = nexus.get_agent_engine_names()
+    planner_options = nexus.get_planner_names() + ["None"]
 
     # Assuming action_choices is defined elsewhere
     # action_choices = [...]
@@ -141,9 +142,15 @@ def agents_panel(nexus: Nexus):
                 interactive=True,
             )
             agent_planning_new = gr.Textbox(
-                label="Planning",
+                label="Planner",
                 placeholder="Planning details",
                 interactive=True,
+            )
+            agent_planning_new = gr.Dropdown(
+                label="Planner",
+                choices=planner_options,
+                interactive=True,
+                value=planner_options[0],
             )
             agent_thought_template_new = gr.Textbox(
                 label="Thought Template",
@@ -214,6 +221,12 @@ def agents_panel(nexus: Nexus):
                 label="Planning",
                 placeholder="Planning details",
             )
+            agent_planning = gr.Dropdown(
+                label="Planner",
+                choices=planner_options,
+                interactive=True,
+                value=planner_options[0],
+            )
             agent_thought_template = gr.Textbox(
                 label="Thought Template",
                 placeholder="Thought template ID",
@@ -243,7 +256,7 @@ def agents_panel(nexus: Nexus):
                 "{}",
                 "{}",
                 "{}",
-                "{}",
+                "None",
                 "{}",
                 None,
             )

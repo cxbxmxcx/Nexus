@@ -123,6 +123,7 @@ class ActionManager:
         self.actions = []  # Initialize an empty list to store actions
         self.actions_folders = GlobalValues.ACTIONS_FOLDERS
         self.collect_and_update_actions()
+        # print(self.actions)
 
     def add_action(self, action):
         """Manually add a function specification."""
@@ -131,6 +132,12 @@ class ActionManager:
     def get_actions(self):
         """Retrieve all stored function specifications."""
         return self.actions
+
+    def get_action(self, action_name):
+        """Retrieve a specific function specification by name."""
+        return next(
+            (action for action in self.actions if action["name"] == action_name), None
+        )
 
     def collect_and_update_actions(self):
         """Collect and update actions with function pointers from Python files in the specified folder."""

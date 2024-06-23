@@ -5,6 +5,8 @@ class GlobalValues:
     AGENTS_WORKING_FOLDER = "agent_working_folder"
     AGENT_ENGINES_FOLDER = "nexus_agent_engines"
     ACTIONS_FOLDERS = ["nexus_actions"]
+    PLANNERS_FOLDER = "nexus_planners"
+    USE_MOCK = False
 
     @classmethod
     def set_value(cls, var_name, value):

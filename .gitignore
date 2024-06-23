@@ -171,3 +171,7 @@ nexus.db*
 
 *.bin 
 *.log
+
+logs.txt
+/logs
+/agent_working_folder

@@ -1,37 +1,6 @@
 import wikipedia
 
 from nexus.nexus_base.action_manager import agent_action
-from nexus.nexus_base.global_values import GlobalValues
-
-
-@agent_action
-def search_wikipedia(query):
-    """Searches Wikipedia for the given query and returns a list[] of matching page_ids."""
-    if GlobalValues.USE_MOCK:
-        return search_wikipedia_mock(query)
-    wikipedia.set_lang("en")
-    search_results = wikipedia.search(query)
-    return search_results
-
-
-@agent_action
-def get_wikipedia_summary(page_id):
-    """Gets the summary of the Wikipedia page for the given page_id."""
-    if GlobalValues.USE_MOCK:
-        return get_wikipedia_summary_mock(page_id)
-    wikipedia.set_lang("en")
-    summary = wikipedia.summary(page_id)
-    return summary
-
-
-@agent_action
-def get_wikipedia_page(page_id):
-    """Gets the full content of the Wikipedia page for the given page_id."""
-    if GlobalValues.USE_MOCK:
-        return get_wikipedia_page_mock(page_id)
-    wikipedia.set_lang("en")
-    page = wikipedia.page(page_id)
-    return page.content
 
 
 def mock_search_results(query):
@@ -57,18 +26,21 @@ def mock_page(page_id):
     return page
 
 
+@agent_action
 def search_wikipedia_mock(query):
     """Searches Wikipedia for the given query and returns a list[] of matching page_ids."""
     search_results = mock_search_results(query)
     return search_results
 
 
+@agent_action
 def get_wikipedia_summary_mock(page_id):
     """Gets the summary of the Wikipedia page for the given page_id."""
     summary = mock_summary(page_id)
     return summary
 
 
+@agent_action
 def get_wikipedia_page_mock(page_id):
     """Gets the full content of the Wikipedia page for the given page_id."""
     page = mock_page(page_id)

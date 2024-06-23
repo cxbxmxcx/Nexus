@@ -35,8 +35,9 @@ class AnthropicAgentEngine(BaseAgentEngine):
             "model",
             {
                 "type": "string",
-                "default": "claude-3-opus-20240229",
+                "default": "claude-3-5-sonnet-20240620",
                 "options": [
+                    "claude-3-5-sonnet-20240620",
                     "claude-3-opus-20240229",
                     "claude-3-sonnect-20240229",
                     "claude-3-haiku-20240307",
@@ -74,8 +75,35 @@ class AnthropicAgentEngine(BaseAgentEngine):
             },
         )
 
-    async def get_response(self, user_input, thread_id=None):
-        return None
+    def run_stream(self, system, messages, use_tools=True):
+        self.last_message = ""
+        stream = self.client.messages.create(
+            max_tokens=self.max_tokens,
+            messages=messages,
+            model=self.model,
+            temperature=self.temperature,
+            system=system,
+            stream=True,
+        )
+
+        def generate_responses():
+            for event in stream:
+                if event.type == "content_block_delta":
+                    self.last_message += event.delta.text
+                    yield self.last_message
+                else:
+                    yield self.last_message
+
+        return generate_responses()
+
+    def execute_prompt(self, prompt):
+        message = self.client.messages.create(
+            model=self.model,
+            max_tokens=1024,
+            system=prompt,
+            messages=[{"role": "user", "content": "run"}],
+        )
+        return message.content[0].text
 
     def get_semantic_response(self, system, user):
         messages = [
