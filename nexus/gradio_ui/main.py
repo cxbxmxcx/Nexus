@@ -361,6 +361,9 @@ def authentication(username, password):
 
 
 if __name__ == "__main__":
-    demo.launch(auth=authentication)
+    demo.launch(
+        auth=authentication,
+        inbrowser=True,
+    )
     # use the following to launch in browser with a shareable link
     # demo.launch(share=True, inbrowser=True)
