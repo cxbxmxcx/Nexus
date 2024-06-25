@@ -30,6 +30,12 @@ To begin using Nexus, you need to set up a Python virtual environment (version 3
 #### Quick Setup
 
 ```bash
+# Create a new virtual environment and activate it
+# on Windows
+source .venv/Scripts/activate
+#on Mac/Linux
+source .venv/scripts/activate
+
 # Install Nexus directly from the GitHub repository
 pip install git+https://github.com/cxbxmxcx/Nexus.git
 
@@ -39,6 +45,9 @@ export OPENAI_API_KEY="<your API key>"
 $env:OPENAI_API_KEY="<your API key>"
 # or create a .env file with your API key
 echo 'OPENAI_API_KEY="<your API key>"' > .env
+
+# Install the module
+pip install -e Nexus
 
 # Run the application
 nexus run
