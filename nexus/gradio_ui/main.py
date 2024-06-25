@@ -13,22 +13,6 @@ from nexus.gradio_ui.thread_panel import thread_panel
 from nexus.nexus_base.global_values import GlobalValues
 from nexus.nexus_base.nexus import Nexus
 
-# from playground.actions_manager import ActionsManager
-# from playground.assistants_api import api
-# from playground.assistants_panel import assistants_panel
-# from playground.assistants_utils import EventHandler, get_tools
-# from playground.environment_manager import EnvironmentManager
-# from playground.semantic_manager import SemanticManager
-# from playground.constants import ASSISTANTS_WORKING_FOLDER
-
-# thread = api.create_thread()  # create a new thread everytime this is run
-# actions_manager = ActionsManager()
-# semantic_manager = SemanticManager()
-
-# # create code environment
-# env_manager = EnvironmentManager()
-# env_manager.install_requirements()
-
 logger = Logger("logs.txt")
 logger.reset_logs()
 
