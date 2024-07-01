@@ -141,11 +141,6 @@ def agents_panel(nexus: Nexus):
                 placeholder="Reasoning process",
                 interactive=True,
             )
-            agent_planning_new = gr.Textbox(
-                label="Planner",
-                placeholder="Planning details",
-                interactive=True,
-            )
             agent_planning_new = gr.Dropdown(
                 label="Planner",
                 choices=planner_options,
@@ -216,10 +211,6 @@ def agents_panel(nexus: Nexus):
             agent_reasoning = gr.Textbox(
                 label="Reasoning",
                 placeholder="Reasoning process",
-            )
-            agent_planning = gr.Textbox(
-                label="Planning",
-                placeholder="Planning details",
             )
             agent_planning = gr.Dropdown(
                 label="Planner",

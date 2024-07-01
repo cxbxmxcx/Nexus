@@ -589,6 +589,9 @@ class Nexus:
         ]
         engine = self.get_agent_engine(agent)
 
+        def post_message(role, content):
+            self.post_message(thread_id, agent.name, role, content)
+
         if agent.planning is not None and agent.planning != "None":
             planner = self.get_planner(agent.planning)
             plan = planner.create_plan(self, agent, messages[-1]["content"])
@@ -607,11 +610,13 @@ class Nexus:
                     "role": "assistant",
                     "content": content,
                 }
+                post_message("assistant", content)
                 messages.append(plan_output)
                 next_task = {
                     "role": "user",
                     "content": "summarize the results and suggest next steps.",
                 }
+                post_message("user", "summarize the results and suggest next steps.")
                 messages.append(next_task)
                 use_tools = False
 
@@ -620,7 +625,9 @@ class Nexus:
         engine.actions = selected_actions
         # engine.configure(agent.engine_settings)
         print(f"Running stream for {agent.name} using engine {agent.engine}.")
-        return engine.run_stream(agent.instructions, messages, use_tools=use_tools)
+        return engine.run_stream(
+            agent.instructions, messages, post_message, use_tools=use_tools
+        )
 
     def execute_prompt(self, agent, prompt):
         engine = self.get_agent_engine(agent)

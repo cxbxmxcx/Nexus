@@ -96,7 +96,7 @@ class OpenAIAgentEngine(BaseAgentEngine):
         )
         return str(response.choices[0].message.content)
 
-    def run_stream(self, system, messages, use_tools=True):
+    def run_stream(self, system, messages, post_thread_callback, use_tools=True):
         # Inject system message if present
         if system:
             self.inject_system_message(messages, system)

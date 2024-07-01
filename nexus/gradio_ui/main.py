@@ -217,7 +217,7 @@ body, html {
 }
 
 #instructions textarea {
-    min-height: calc(100vh - (var(--adjustment-ratio) + 750px)); /* Additional subtraction to account for other elements */
+    min-height: calc(100vh - (var(--adjustment-ratio) + 575px)); /* Additional subtraction to account for other elements */
     max-height: 1000px;
     resize: vertical;
     overflow-y: auto;
@@ -266,7 +266,7 @@ def update_message(request: gr.Request):
 
 theme = "default"
 
-with gr.Blocks(css=custom_css, theme=theme) as demo:
+with gr.Blocks(css=custom_css, theme=theme, title="Nexus") as demo:
     username_display = gr.Markdown("", elem_id="username")
     username = gr.Markdown("", visible=False)
 

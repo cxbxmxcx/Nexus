@@ -11,6 +11,14 @@ def run_python_code(code, filename=None):
 
 
 @agent_action
+def get_latest_code():
+    """Returns the latest working Python code that was last run in the virtual environment."""
+    env_manager = EnvironmentManager()
+    latest_code = env_manager.get_latest_code()
+    return latest_code
+
+
+@agent_action
 def run_shell_command(command):
     """Runs the given shell command in a virtual environment."""
     env_manager = EnvironmentManager()

@@ -95,7 +95,7 @@ class AnthropicAgentEngine(BaseAgentEngine):
 
         return anthropic_schema
 
-    def run_stream(self, system, messages, use_tools=True):
+    def run_stream(self, system, messages, post_thread_callback, use_tools=True):
         self.last_message = ""
 
         if use_tools and len(self.tools) > 0:
@@ -126,12 +126,14 @@ class AnthropicAgentEngine(BaseAgentEngine):
 
                 # tool_result = process_tool_call(tool_name, tool_input)
                 action_to_call = available_tools[tool_name]
-
-                print(f"Calling function: {tool_name} with args: {tool_input}")
+                call_msg = (
+                    f"Executing tool function: {tool_name} with args: {tool_input}"
+                )
+                print(call_msg)
 
                 tool_result = action_to_call(**tool_input, _caller_agent=self)
 
-                messages += [
+                message = [
                     {"role": "assistant", "content": response.content},
                     {
                         "role": "user",
@@ -144,6 +146,7 @@ class AnthropicAgentEngine(BaseAgentEngine):
                         ],
                     },
                 ]
+                messages += message
 
                 response = self.client.messages.create(
                     model=self.model,

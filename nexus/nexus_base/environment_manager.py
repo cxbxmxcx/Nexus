@@ -39,6 +39,16 @@ class EnvironmentManager:
         subprocess.check_call([pip_executable, "install", package])
         print(f"Installed package: {package}")
 
+    def get_latest_code(self):
+        code_files = [f for f in os.listdir(self.env_path) if f.startswith("code")]
+        if code_files:
+            latest_code_file = max(code_files, key=os.path.getctime)
+            with open(os.path.join(self.env_path, latest_code_file), "r") as f:
+                latest_code = f.read()
+                return latest_code
+        else:
+            return None
+
     def run_code(self, code, filename=None):
         if not filename:
             timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")

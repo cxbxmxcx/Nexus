@@ -71,7 +71,7 @@ class BaseAgentEngine:
         # Placeholder method to be implemented by subclasses
         raise NotImplementedError("This method should be implemented by subclasses.")
 
-    def run_stream(self, system, messages):
+    def run_stream(self, system, messages, post_thread_callback=None, use_tools=False):
         # Placeholder method for streaming responses, to be implemented by subclasses
         raise NotImplementedError("This method should be implemented by subclasses.")
 
