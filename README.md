@@ -27,7 +27,7 @@ Nexus will support the following features:
 
 To begin using Nexus, you need to set up a Python virtual environment (version 3.10 recommended). If you're unfamiliar with creating a virtual environment, please refer to Appendix B of the book this platform accompanies.
 
-#### Quick Setup
+#### Quick Setup for Nexus V1, V2 coming soon
 
 ```bash
 # Install Nexus directly from the GitHub repository
@@ -57,7 +57,9 @@ git clone https://github.com/cxbxmxcx/Neuxs.git
 cd Nexus
 
 # Install the cloned repository in editable mode
-pip install -e Nexus
+pip install -e .
+
+nexus run  
 
 # Follow the same steps as above to set your OpenAI API Key and run the application
 ```
