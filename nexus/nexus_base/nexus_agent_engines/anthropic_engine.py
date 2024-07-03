@@ -95,7 +95,7 @@ class AnthropicAgentEngine(BaseAgentEngine):
 
         return anthropic_schema
 
-    def run_stream(self, system, messages, post_thread_callback, use_tools=True):
+    def run_stream(self, system, messages, stream_complete, use_tools=True):
         self.last_message = ""
 
         if use_tools and len(self.tools) > 0:
@@ -182,6 +182,7 @@ class AnthropicAgentEngine(BaseAgentEngine):
                         yield self.last_message
                     else:
                         yield self.last_message
+                stream_complete(self.last_message)
 
             return generate_responses()
 

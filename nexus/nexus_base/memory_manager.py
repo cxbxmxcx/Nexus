@@ -148,12 +148,12 @@ class MemoryManager:
         return True
 
     def append_memory(
-        self, memory_store, user_input, llm_response, memory_function=None, agent=None
+        self, memory_store, user_input, llm_response, memory_function=None, engine=None
     ):
         if (
             memory_store is None
             or user_input is None
-            or agent is None
+            or engine is None
             or memory_function is None
         ):
             return False
@@ -174,7 +174,7 @@ class MemoryManager:
             """
 
         try:
-            memories = agent.get_semantic_response(
+            memories = engine.get_semantic_response(
                 memory_function.function_prompt, memory
             )
             memories, code = extract_code(memories)

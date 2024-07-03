@@ -192,6 +192,7 @@ def run(history, agent_id, thread_id):
 custom_css = """
 :root {
     --adjustment-ratio: 225px; /* Height to subtract from the viewport for chatbot */
+    --iframe-ratio: 150px; /* Height of the iframe */
 }
 
 body, html {
@@ -256,12 +257,26 @@ video:hover {
     height: auto;
     max-width: 100%; /* ensures it doesn’t exceed the container's width */
 }
+
+#admin {
+    height: calc(100vh - var(--iframe-ratio)) !important; /* Uses adjustment ratio */
+    overflow-y: auto !important;
+}
 """
 
 
 def update_message(request: gr.Request):
     username = request.username
     return username, f"### Welcome, {username}"
+
+
+streamlit_url = (
+    "http://localhost:8501/?admin=admin"  # Update this with your Streamlit app's URL
+)
+
+iframe_html = (
+    f'<iframe id="admin" src="{streamlit_url}" width="100%" height="600px"></iframe>'
+)
 
 
 theme = "default"
@@ -306,6 +321,9 @@ with gr.Blocks(css=custom_css, theme=theme, title="Nexus") as demo:
             )
             demo.load(logger.read_logs, None, logs, every=1)
             demo.load(update_message, None, [username, username_display])
+
+    with gr.Tab(label="Nexus Admin"):
+        gr.HTML(iframe_html)
 
     chat_msg = chat_input.submit(
         ask_agent,

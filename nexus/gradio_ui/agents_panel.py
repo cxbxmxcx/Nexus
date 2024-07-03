@@ -115,14 +115,14 @@ def agents_panel(nexus: Nexus):
                 label="Actions", choices=action_choices, interactive=True
             )
         with gr.Accordion("Retrieval", open=False):
-            agent_memory_new = gr.Textbox(
+            agent_memory_new = gr.Dropdown(
                 label="Memory",
-                placeholder="Memory settings",
+                choices=["None", "Memory store"],
                 interactive=True,
             )
-            agent_knowledge_new = gr.Textbox(
+            agent_knowledge_new = gr.Dropdown(
                 label="Knowledge",
-                placeholder="Knowledge base",
+                choices=["None", "Knowledge store"],
                 interactive=True,
             )
         with gr.Accordion("Advanced", open=False):
@@ -171,34 +171,50 @@ def agents_panel(nexus: Nexus):
 
         agent_engine_settings = engine_settings_panel()
 
-        def update_engine_settings(agent_engine):
-            if agent_engine is None:
-                return dict(options={}, settings={})
-            engine_options, defaults = nexus.get_agent_engine_options_defaults(
-                agent_engine
-            )
-            eos = dict(options=engine_options, settings=defaults)
-            return json.dumps(eos, sort_keys=True)
-
-        agent_engine.change(
-            fn=update_engine_settings,
-            inputs=[agent_engine],
-            outputs=[agent_engine_settings],
-        )
-
         with gr.Accordion("Actions", open=False, elem_id="actions"):
             agent_actions = gr.CheckboxGroup(
                 label="Actions", choices=action_choices, interactive=True
             )
         with gr.Accordion("Retrieval", open=False):
-            agent_memory = gr.Textbox(
+            agent_memory = gr.Dropdown(
                 label="Memory",
-                placeholder="Memory settings",
+                choices=["None", "Memory store"],
             )
-            agent_knowledge = gr.Textbox(
+            agent_knowledge = gr.Dropdown(
                 label="Knowledge",
-                placeholder="Knowledge base",
+                choices=["None", "Knowledge store"],
             )
+
+        def update_engine_settings(agent_id, agent_engine):
+            if agent_engine is None:
+                return dict(options={}, settings={})
+            engine_options, defaults = nexus.get_agent_engine_options_defaults(
+                agent_engine
+            )
+            agent = nexus.get_agent(agent_id)
+            eos = dict(options=engine_options, settings=defaults)
+            engine = nexus.get_agent_engine_by_name(agent_engine)
+            if engine.supports_knowledge:
+                knowledge_store_choices = nexus.get_knowledge_store_names() + ["None"]
+            else:
+                knowledge_store_choices = ["None"]
+            if engine.supports_memory:
+                memory_store_choices = nexus.get_memory_store_names() + ["None"]
+            else:
+                memory_store_choices = ["None"]
+
+            return (
+                json.dumps(eos, sort_keys=True),
+                gr.update(choices=memory_store_choices, value=agent.memory),
+                gr.update(choices=knowledge_store_choices, value=agent.knowledge),
+            )
+
+        agent_engine.change(
+            fn=update_engine_settings,
+            inputs=[agent_id, agent_engine],
+            outputs=[agent_engine_settings, agent_memory, agent_knowledge],
+        )
+
         with gr.Accordion("Advanced", open=False):
             agent_evaluation = gr.Textbox(
                 label="Evaluation",
@@ -233,6 +249,16 @@ def agents_panel(nexus: Nexus):
             engine_settings = json.dumps(
                 dict(options=options, settings=settings), sort_keys=True
             )
+            engine = nexus.get_agent_engine_by_name(default_engine)
+            if engine.supports_knowledge:
+                knowledge_store_choices = nexus.get_knowledge_store_names() + ["None"]
+            else:
+                knowledge_store_choices = ["None"]
+            if engine.supports_memory:
+                memory_store_choices = nexus.get_memory_store_names() + ["None"]
+            else:
+                memory_store_choices = ["None"]
+
             return (
                 gr.update(
                     choices=list(agent_options.keys()), value=CREATE_NEW_AGENT_KEY
@@ -243,8 +269,8 @@ def agents_panel(nexus: Nexus):
                 default_engine,
                 engine_settings,
                 [],
-                "{}",
-                "{}",
+                gr.update(choices=memory_store_choices, value="None"),
+                gr.update(choices=knowledge_store_choices, value="None"),
                 "{}",
                 "{}",
                 "None",
@@ -263,6 +289,16 @@ def agents_panel(nexus: Nexus):
             engine_settings = json.dumps(
                 dict(options=options, settings=settings), sort_keys=True
             )
+            engine = nexus.get_agent_engine(agent)
+            if engine.supports_knowledge:
+                knowledge_store_choices = nexus.get_knowledge_store_names() + ["None"]
+            else:
+                knowledge_store_choices = ["None"]
+            if engine.supports_memory:
+                memory_store_choices = nexus.get_memory_store_names() + ["None"]
+            else:
+                memory_store_choices = ["None"]
+
             actions = json.loads(agent.actions)
             return (
                 gr.update(choices=list(agent_options.keys()), value=agent.name),
@@ -272,8 +308,8 @@ def agents_panel(nexus: Nexus):
                 agent.engine,
                 engine_settings,
                 actions,
-                agent.memory,
-                agent.knowledge,
+                gr.update(choices=memory_store_choices, value=agent.memory),
+                gr.update(choices=knowledge_store_choices, value=agent.knowledge),
                 agent.evaluation,
                 agent.feedback,
                 agent.reasoning,

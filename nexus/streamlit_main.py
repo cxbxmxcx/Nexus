@@ -19,6 +19,14 @@ from nexus.streamlit_ui.assistants_chat import assistants_page
 def main():
     st.set_page_config(page_title="Nexus", page_icon="icon.png", layout="wide")
 
+    query_params = st.query_params
+
+    # Get specific parameter values
+    admin = query_params.get("admin", [None])[0]
+    if not admin:
+        st.write("Access this page through the Admin interface.")
+        return
+
     win_height = st_js(js_expressions="top.innerHeight", key="SCR")
     if "log_messages" not in st.session_state:
         st.session_state.log_messages = ""
@@ -29,13 +37,13 @@ def main():
         selected_page = st.sidebar.selectbox(
             "Nexus",
             [
-                "Agents Chat Playground",
-                "Assistants Chat Playground",
+                # "Agents Chat Playground",
+                # "Assistants Chat Playground",
                 "Actions",
                 "Knowledge",
                 "Memory",
-                "Profile",
-                "Usage",
+                # "Profile",
+                # "Usage",
                 "Thought Templates",
                 "Thought Trees",
                 "Thought Networks",

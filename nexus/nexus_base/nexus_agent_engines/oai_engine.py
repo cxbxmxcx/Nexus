@@ -96,7 +96,7 @@ class OpenAIAgentEngine(BaseAgentEngine):
         )
         return str(response.choices[0].message.content)
 
-    def run_stream(self, system, messages, post_thread_callback, use_tools=True):
+    def run_stream(self, system, messages, stream_complete, use_tools=True):
         # Inject system message if present
         if system:
             self.inject_system_message(messages, system)
@@ -170,21 +170,22 @@ class OpenAIAgentEngine(BaseAgentEngine):
 
         last_response = str(response_message.content)
         msg = ""
-        continue_stream = False
-        if "CONTINUE" in last_response:
-            last_response = last_response.replace("CONTINUE", "")
-            continue_stream = True
+        # continue_stream = False
+        # if "CONTINUE" in last_response:
+        #     last_response = last_response.replace("CONTINUE", "")
+        #     continue_stream = True
 
         for character in last_response:
             msg += character
             yield msg
 
-        if continue_stream:
-            messages.append({"role": "assistant", "content": last_response})
-            messages.append({"role": "user", "content": "proceed"})
-            generator = self.run_stream(None, messages, use_tools)
-            for response in generator:
-                yield response
+        # if continue_stream:
+        #     messages.append({"role": "assistant", "content": last_response})
+        #     messages.append({"role": "user", "content": "proceed"})
+        #     generator = self.run_stream(None, messages, use_tools)
+        #     for response in generator:
+        #         yield response
+        stream_complete(last_response)
         return
 
     def execute_prompt(self, prompt):

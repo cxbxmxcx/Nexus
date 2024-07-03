@@ -34,6 +34,11 @@
       "module": "uvicorn",
       "args": ["nexus.api.main:app", "--reload" ]
     }
-
-  ]
+  ],
+  "compounds": [
+    {
+        "name": "Debug Nexus Combined",
+        "configurations": ["Python Debugger: Gradio UI", "Python Debugger: Streamlit UI"]
+    }
+]
 }

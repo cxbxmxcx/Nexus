@@ -48,34 +48,42 @@ def display_items_per_label(grouped_items):
     st.table(label_counts_df.sort_values(by="Number of Items", ascending=False))
 
 
-def get_agent(chat, agent_key, store_type="memory"):
-    agents = chat.get_agent_names()
+def get_agent_engine(nexus, agent_key, store_type="memory"):
+    engines = nexus.get_agent_engine_names()
     if store_type == "knowledge":
-        agents = [agent for agent in agents if chat.get_agent(agent).supports_knowledge]
+        engines = [
+            engine
+            for engine in engines
+            if nexus.get_agent_engine(engine).supports_knowledge
+        ]
     elif store_type == "memory":
-        agents = [agent for agent in agents if chat.get_agent(agent).supports_memory]
+        engines = [
+            engine
+            for engine in engines
+            if nexus.get_agent_engine_by_name(engine).supports_memory
+        ]
     else:
         st.error("Invalid store type. Please choose 'knowledge' or 'memory'.")
         st.stop()
     agent_key = agent_key + store_type
-    selected_agent = st.selectbox(
+    selected_engine = st.selectbox(
         "Choose an agent engine:",
-        agents,
+        engines,
         key=agent_key + "agent",
         # label_visibility="collapsed",
         help=f"Choose an agent to manage {store_type} with.",
     )
-    chat_agent = chat.get_agent(selected_agent)
+    agent_engine = nexus.get_agent_engine_by_name(selected_engine)
     with st.expander("Agent Options:", expanded=False):
-        options = chat_agent.get_attribute_options()
+        options = agent_engine.get_engine_setting_options()
         if options:
             selected_options = create_options_ui(options, agent_key)
             for key, value in selected_options.items():
-                setattr(chat_agent, key, value)
-    return chat_agent
+                setattr(agent_engine, key, value)
+    return agent_engine
 
 
-def view_embeddings(chat, item_store_name, store_type="memory"):
+def view_embeddings(nexus, item_store_name, store_type="memory"):
     """
     Displays all memories/knowledge and their embeddings from ChromaDB, colored by KMeans clusters.
     Finds the optimum number of clusters based on silhouette scores for 2 to 20 clusters,
@@ -86,9 +94,11 @@ def view_embeddings(chat, item_store_name, store_type="memory"):
         st.stop()
 
     if store_type == "knowledge":
-        items = chat.get_documents(item_store_name, include=["documents", "embeddings"])
+        items = nexus.get_documents(
+            item_store_name, include=["documents", "embeddings"]
+        )
     elif store_type == "memory":
-        items = chat.get_memories(item_store_name, include=["documents", "embeddings"])
+        items = nexus.get_memories(item_store_name, include=["documents", "embeddings"])
 
     embeddings = items["embeddings"]
     items = items["documents"]
@@ -157,7 +167,7 @@ def view_embeddings(chat, item_store_name, store_type="memory"):
             # Group embeddings by labels using the provided function
             st.header(f"Manage and Compress {store_type.capitalize()} Embeddings")
             grouped_items = group_items_by_labels(items, labels_optimal)
-            chat_agent = get_agent(chat, "embed")
+            agent_engine = get_agent_engine(nexus, "embed")
             display_items_per_label(grouped_items)
             st.write(
                 "Consider using the agent to compress if you have more than 10 items in a cluster."
@@ -167,14 +177,14 @@ def view_embeddings(chat, item_store_name, store_type="memory"):
                     text=f"The agent is compressing {store_type}_{item_store_name}..."
                 ):
                     if store_type == "knowledge":
-                        chat.compress_knowledge(
-                            item_store_name, grouped_items, chat_agent
+                        nexus.compress_knowledge(
+                            item_store_name, grouped_items, agent_engine
                         )
                         st.success(f"{store_type} compressed successfully!")
                         st.rerun()
                     elif store_type == "memory":
-                        chat.compress_memories(
-                            item_store_name, grouped_items, chat_agent
+                        nexus.compress_memories(
+                            item_store_name, grouped_items, agent_engine
                         )
                         st.success(f"{store_type} compressed successfully!")
                         st.rerun()

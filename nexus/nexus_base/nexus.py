@@ -153,9 +153,12 @@ class Nexus:
     def get_agent_engine(self, agent):
         if agent is None or agent.engine is None:
             return None
-        engine = self.agent_engine_manager.get_agent_engine(agent.engine)
+        return self.get_agent_engine_by_name(agent.engine)
+
+    def get_agent_engine_by_name(self, engine_name):
+        engine = self.agent_engine_manager.get_agent_engine(engine_name)
         if not engine:
-            raise ValueError(f"Agent engine '{agent.engine}' not found.")
+            raise ValueError(f"Agent engine '{engine_name}' not found.")
         # agent.actions = self.action_manager.get_actions()
         return engine
 
@@ -474,14 +477,14 @@ class Nexus:
     def get_memories(self, memory_store, include=["documents", "embeddings"]):
         return self.memory_manager.get_memories(memory_store, include)
 
-    def load_memory(self, memory_store, memory, agent):
+    def load_memory(self, memory_store, memory, agent_engine):
         if memory_store is None or memory is None:
             return None
         memory_store = MemoryStore.get(MemoryStore.name == memory_store)
         memory_function = self.get_memory_function(memory_store.memory_type)
         self.set_tracking_function("memory:load")
         result = self.memory_manager.append_memory(
-            memory_store, memory, None, memory_function, agent
+            memory_store, memory, None, memory_function, agent_engine
         )
         self.set_tracking_function("Not Set")
         return result
@@ -520,14 +523,15 @@ class Nexus:
             memory_store.save()
             return True
 
-    def append_memory(self, memory_store, user_input, llm_response, agent):
+    def append_memory(self, memory_store, user_input, llm_response, agent_engine_name):
         if memory_store is None or user_input is None:
             return None
         memory_store = MemoryStore.get(MemoryStore.name == memory_store)
         memory_function = self.get_memory_function(memory_store.memory_type)
         self.set_tracking_function("memory:append")
+        agent_engine = self.get_agent_engine_by_name(agent_engine_name)
         result = self.memory_manager.append_memory(
-            memory_store, user_input, llm_response, memory_function, agent
+            memory_store, user_input, llm_response, memory_function, agent_engine
         )
         self.set_tracking_function("Not Set")
         return result
@@ -587,10 +591,28 @@ class Nexus:
         messages = [
             {"role": message.role, "content": message.content} for message in messages
         ]
+        input_content = messages[-1]["content"]
+        message_content = messages[-1]["content"]
+
+        knowledge_rag = self.apply_knowledge_RAG(agent.knowledge, message_content)
+        memory_rag = self.apply_memory_RAG(agent.memory, message_content, agent)
+        message_content += knowledge_rag + memory_rag
+        messages[-1]["content"] = message_content
+
         engine = self.get_agent_engine(agent)
 
         def post_message(role, content):
             self.post_message(thread_id, agent.name, role, content)
+
+        def stream_complete(output):
+            # update memory if needed
+            if agent.memory is not None and agent.memory != "None":
+                self.append_memory(
+                    agent.memory,
+                    input_content,
+                    output,
+                    agent.engine,
+                )
 
         if agent.planning is not None and agent.planning != "None":
             planner = self.get_planner(agent.planning)
@@ -626,7 +648,7 @@ class Nexus:
         # engine.configure(agent.engine_settings)
         print(f"Running stream for {agent.name} using engine {agent.engine}.")
         return engine.run_stream(
-            agent.instructions, messages, post_message, use_tools=use_tools
+            agent.instructions, messages, stream_complete, use_tools=use_tools
         )
 
     def execute_prompt(self, agent, prompt):

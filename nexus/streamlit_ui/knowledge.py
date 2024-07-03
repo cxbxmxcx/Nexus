@@ -4,7 +4,7 @@ from nexus.streamlit_ui.cache import get_nexus
 from nexus.streamlit_ui.embeddings import view_embeddings
 
 
-def add_document_to_store(chat, knowledge_store):
+def add_document_to_store(nexus, knowledge_store):
     if knowledge_store is None:
         st.error("Please create a knowledge store first.")
         st.stop()
@@ -20,17 +20,17 @@ def add_document_to_store(chat, knowledge_store):
             # Assuming text files for simplicity, but you may need to handle different file types differently
             document_name = document_file.name
 
-            chat.load_document(knowledge_store, document_file)
+            nexus.load_document(knowledge_store, document_file)
             st.success("Document uploaded and processed successfully!")
-            chat.add_document_to_store(knowledge_store, document_name)
+            nexus.add_document_to_store(knowledge_store, document_name)
             st.success(
                 f"Document '{document_name}' added to Knowledge Store '{knowledge_store}'!"
             )
 
 
 def knowledge_page(username, win_height):
-    chat = get_nexus()
-    user = chat.get_participant(username)
+    nexus = get_nexus()
+    user = nexus.get_participant(username)
     if user is None:
         st.error("Invalid user")
         st.stop()
@@ -44,27 +44,27 @@ def knowledge_page(username, win_height):
             "Create Knowledge Store",
             disabled=(
                 store_name == ""
-                or store_name in chat.get_knowledge_store_names()
+                or store_name in nexus.get_knowledge_store_names()
                 or store_name is None
                 or len(store_name) < 3
             ),
         ):
-            chat.add_knowledge_store(store_name)
+            nexus.add_knowledge_store(store_name)
             st.success(f"Knowledge Store '{store_name}' created!")
 
         selected_store_to_delete = st.selectbox(
             "Select a knowledge store to delete:",
-            options=list(chat.get_knowledge_store_names()),
+            options=list(nexus.get_knowledge_store_names()),
         )
         if st.button("Delete Knowledge Store"):
-            chat.delete_knowledge_store(selected_store_to_delete)
+            nexus.delete_knowledge_store(selected_store_to_delete)
             st.success(f"Knowledge Store '{selected_store_to_delete}' deleted!")
 
     # Document Management within a Knowledge Store
     st.header("Manage Knowledge Store")
     selected_store = st.selectbox(
         "Select a knowledge store to manage documents:",
-        options=list(chat.get_knowledge_store_names()),
+        options=list(nexus.get_knowledge_store_names()),
         key="manage_docs",
     )
     st.header(f"Managing {selected_store}")
@@ -80,28 +80,28 @@ def knowledge_page(username, win_height):
 
     with config_tabs[0]:
         st.subheader("Add Documents to Knowledge Store")
-        add_document_to_store(chat, selected_store)
+        add_document_to_store(nexus, selected_store)
 
     with config_tabs[1]:
         st.subheader("Examine Documents in Knowledge Store")
-        df = chat.examine_documents(selected_store)
+        df = nexus.examine_documents(selected_store)
         st.table(df)
 
     with config_tabs[2]:
         st.subheader("View Embeddings in Knowledge Store")
-        view_embeddings(chat, selected_store, "knowledge")
+        view_embeddings(nexus, selected_store, "knowledge")
 
     with config_tabs[3]:
         st.subheader("Query Knowledge Store")
         query = st.text_area("Enter a query to search for similar documents:")
         if st.button("Search"):
-            docs = chat.query_documents(selected_store, query)
+            docs = nexus.query_documents(selected_store, query)
             for doc in docs:
                 st.write(doc)
 
     with config_tabs[4]:
         st.subheader("Knowledge Store Configuration")
-        knowledge_store = chat.get_knowledge_store(selected_store)
+        knowledge_store = nexus.get_knowledge_store(selected_store)
 
         options = ["Character", "Recursive"]
         knowledge_store.chunking_option = st.selectbox(
@@ -117,4 +117,4 @@ def knowledge_page(username, win_height):
         )
 
         if st.button("Save Configuration"):
-            chat.update_knowledge_store(knowledge_store)
+            nexus.update_knowledge_store(knowledge_store)
