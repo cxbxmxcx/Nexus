@@ -70,10 +70,14 @@ pip install -e Nexus
 
 # Follow the same steps as above to set your OpenAI API Key and run the application
 ```
+## Nexus Architecture
+The clip shows the basic architecture components for Nexus on an example Python Game Developer agent. Other agents are shown that could also be built using the same platform and tools.
+![Nexus Architecture](media/NexusDiagram.gif)
 
-## Building a Chat Application with Streamlit
 
-Nexus utilizes Streamlit for its web interface, offering a straightforward and powerful tool for creating Python web applications. The book GPT Agents In Action provides detailed instructions on building a chat interface against the OpenAI API, utilizing direct and streaming responses to enhance user engagement.
+## Building a Chat Application with Streamlit and Gradio
+
+Nexus utilizes Streamlit and Gradio for its web interface, offering a straightforward and powerful tool for creating Python web applications. The book GPT Agents In Action provides detailed instructions on building a chat interface against the OpenAI API, utilizing direct and streaming responses to enhance user engagement.
 
 ## Conclusion
 
