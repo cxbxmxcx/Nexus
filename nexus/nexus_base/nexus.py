@@ -646,9 +646,9 @@ class Nexus:
                     output = planner.execute_plan(self, agent, plan)
                     output = dict(plan=plan, output=output)
                     content = f"""
-                    The plan was generated to solve the goal and executed it.
+                    The plan was generated to solve the goal and executed successfully.
                     The results are below:
-                    {json.dumps(output, default=str)}                
+                    {json.dumps(output, default=str)} 
                     """
                     plan_output = {
                         "role": "assistant",
@@ -658,7 +658,7 @@ class Nexus:
                     messages.append(plan_output)
                     next_task = {
                         "role": "user",
-                        "content": "resolve any issues you encountered and continue.",
+                        "content": "return the results",
                     }
                     post_message(**next_task)
                     messages.append(next_task)
@@ -668,7 +668,13 @@ class Nexus:
                     output = f"Error executing plan: {e}"
                     output = dict(plan=plan, output=output)
                     post_message("assistant", output)
+                    post_message("user", "please resolve any issues and try again.")
                     use_tools = True
+
+        if agent.feedback is not None and agent.feedback != "":
+            feedback = self.execute_prompt(agent, agent.feedback)
+            post_message("assistant", feedback)
+            messages.append({"role": "assistant", "content": feedback})
 
         engine.configure_engine_settings(agent.engine_settings)
         selected_actions = self.get_actions(agent.actions)

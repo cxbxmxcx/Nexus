@@ -175,9 +175,9 @@ def format_action(action):
     return result
 
 
-class NexusFeedbackPlanner(NexusPlanner):
+class NexusStepwisePlanner(NexusPlanner):
     """
-    Nexus JSON-based feedback planner.
+    Nexus JSON-based stepwise planner.
     """
 
     def __init__(self):
