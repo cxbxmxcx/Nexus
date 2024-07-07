@@ -44,7 +44,7 @@ class MemoryManager:
         return self.embedding_manager.get_embedding(text)
 
     def query_memories(self, memory_store_name, input_text, n_results=5):
-        if memory_store_name is None or input_text is None:
+        if memory_store_name is None or memory_store_name == "" or input_text is None:
             return None
 
         chroma_client = chromadb.PersistentClient(path=self.CHROMA_DB)
@@ -58,7 +58,7 @@ class MemoryManager:
     def apply_memory_RAG(
         self, memory_store, memory_function, input_text, agent, n_results=5
     ):
-        if memory_store is None or input_text is None:
+        if memory_store is None or memory_store == "" or input_text is None:
             return None
 
         # basic form of memory

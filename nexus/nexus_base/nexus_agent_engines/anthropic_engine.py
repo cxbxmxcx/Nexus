@@ -195,6 +195,15 @@ class AnthropicAgentEngine(BaseAgentEngine):
         )
         return message.content[0].text
 
+    def execute_step_prompt(self, system, steps):
+        message = self.client.messages.create(
+            model=self.model,
+            max_tokens=4096,
+            system=system,
+            messages=steps,
+        )
+        return message.content[0].text
+
     def get_semantic_response(self, system, user):
         messages = [
             {"role": "user", "content": user},

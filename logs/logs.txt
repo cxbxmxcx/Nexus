@@ -1,29 +1,719 @@
 Error loading agent from azure_oai_engine.py: Must provide either the `api_version` argument or the `OPENAI_API_VERSION` environment variable
-Loaded 23 actions.
+Loaded 28 actions.
 Loaded 4 profiles.
 Installed packages from code_env_requirements.txt
-Running on local URL:  http://127.0.0.1:7861
+Running on local URL:  http://127.0.0.1:7860
 
 To create a public link, set `share=True` in `launch()`.
 main logged in successfully.
-Running stream for Fred using engine AnthropicAgentEngine.
-Final Response: I apologize, but I don't have any specific information about the color of your cat. The documents and memories provided don't contain any relevant information about your personal cat's color. 
+Plan for Fred: Prompt: 
+You are a planner for Nexus.
+Your job is to create a properly formatted JSON plan step by step, to satisfy the goal given.
+Create a list of subtasks based off the [GOAL] provided.
+Each subtask must be from within the [AVAILABLE FUNCTIONS] list. Do not use any functions that are not in the list.
+Base your decisions on which functions to use from the description and the name of the function.
+Sometimes, a function may take arguments. Provide them if necessary.
+The plan should be as short as possible.
+You will also be given a list of corrective, suggestive and epistemic feedback from previous plans to help you make your decision.
+For example:
 
-To answer this question accurately, I would need more information from you. Could you please tell me more about your cat? If you have a cat, what color is it? If you don't actually have a cat and this was a hypothetical question, please let me know and I'd be happy to discuss cat colors in general or help with any other questions you might have.
-Running stream for Fred using engine AnthropicAgentEngine.
-Final Response: Based on the memory provided, I can answer your question about the color of your cat.
+[SPECIAL FUNCTIONS]
+for-each- prefix
+description: execute a function for each item in a list
+args: 
+- function: the function to execute
+- list: the list of items to iterate over
+- index: the arg name for the current item in the list
 
-The memory states: "The cat's color is white."
+[AVAILABLE FUNCTIONS]
+GetJokeTopics
+description: Get a list ([str]) of joke topics
 
-So, to answer your question: Your cat is white.
-Running stream for Fred using engine GroqAgent.
+EmailTo
+description: email the input text to a recipient
+args:
+- text: the text to email
+- recipient: the recipient's email address. Multiple addresses may be included if separated by ';'.
+
+Summarize
+description: summarize input text
+args:
+- text: the text to summarize
+
+Joke
+description: Generate a funny joke
+args:
+- topic: the topic to generate a joke about
+
+[GOAL]
+"Get a list of joke topics and generate a different joke for each topic. Email the jokes to a friend."
+
+[OUTPUT]
+    {        
+        "subtasks": [
+            {"function": "GetJokeTopics"},
+            {"function": "for-each", "args": {"list": "output_GetJokeTopics", "index": "topic", "function": {"function": "Joke", "args": {"topic": "topic"}}}},
+            {"function": "EmailTo", "args": {"text": "for-each_output_GetJokeTopics", "recipient": "friend"}}
+        ]
+    }
+
+[AVAILABLE FUNCTIONS]
+Brainstorm
+description: Brainstorm ideas
+args:
+- input: the input to brainstorm about
+
+Poe
+description: Write in the style of author Edgar Allen Poe
+args:
+- text: the text to convert to Poe's style
+
+EmailTo
+description: Write an email to a recipient
+args:
+- text: the text of the email
+- recipient: the recipient's email address.
+
+Translate
+description: translate the text to another language
+args:
+- text: the text to translate
+- language: the language to translate to
+
+[GOAL]
+"Tomorrow is Valentine's day. I need to come up with a few date ideas.
+She likes Edgar Allen Poe so write using his style.
+E-mail these ideas to my significant other. Translate it to French."
+
+[OUTPUT]
+    {        
+        "subtasks": [
+            {"function": "Brainstorm", args: {"input": "Valentine's Day Date Ideas"}},
+            {"function": "Poe", "args": {"text": "output_Brainstorm"},
+            {"function": "Translate", "args": {"text":"output_Poe", "language": "French"}}
+            {"function": "EmailTo", "args": {"text": "output_Translate","recipient": "significant_other"}}            
+        ]
+    }
+    
+[SPECIAL FUNCTIONS]
+for-each
+description: execute a function for each item in a list
+args: 
+- function: the function to execute
+- iterator: the list of items to iterate over
+- index: the arg name for the current item in the list  
+  
+[AVAILABLE FUNCTIONS]
+Brainstorm
+description: Brainstorm ideas
+args:
+- input: the input to brainstorm about
+
+Poe
+description: Write in the style of author Edgar Allen Poe
+args:
+- text: the text to convert to Poe's style
+
+EmailTo
+description: Write an email to a recipient
+args:
+- text: the text of the email
+- recipient: the recipient's email address.
+
+GetCoworkerEmails
+description: returns a list[] of coworker emails
+
+[GOAL]
+"Tomorrow I am announcing my retirement.
+I need to write a retirement speech in the style of Edgar Allen Poe.
+Then I need to send the email to all of my coworkers."
+
+[OUTPUT]    
+    {
+    "subtasks": [
+        { "function": "Brainstorm", "args": { "input": "Retirement Speech Ideas"}},
+        { "function": "Poe", "args": { "text": "output_Brainstorm"}},
+        { "function": "GetCoworkerEmails"},
+        { "function": "for-each", "args": {"list": "output_GetCoworkerEmails","index": "coworker","function": {"function": "EmailTo","args": {"text": "output_Poe","recipient": "coworker"}}}}
+    ]
+}
+    
+[SPECIAL FUNCTIONS]
+for-each
+description: execute a function for each item in a list
+args: 
+- function: the function to execute
+- iterator: the list of items to iterate over
+- index: the arg name for the current item in the list  
+
+[AVAILABLE FUNCTIONS]
+save_file
+description: 
+    Save content to a file.
+
+    :param filename: The name of the file including extension.
+    :param content: The content to save in the file.
+    
+args:
+- filename: filename
+- content: content
+
+search_wikipedia
+description: Searches Wikipedia for the given query and returns a list[] of matching page_ids.
+args:
+- query: query
+
+get_wikipedia_page
+description: Gets the full content of the Wikipedia page for the given page_id.
+args:
+- page_id: page_id
+
+[GOAL]
+search wikipedia for pages on Calgary and then save the list to a file
+
+Be sure to only use functions from the list of available functions. 
+The plan should be as short as possible. 
+And only return the plan in JSON format.
+If you cannot generate a plan, return an empty JSON object.
+[OUTPUT]
+
+Goal: search wikipedia for pages on Calgary and then save the list to a file
+Plan: {'subtasks': [{'function': 'search_wikipedia', 'args': {'query': 'Calgary'}}, {'function': 'save_file', 'args': {'filename': 'calgary_wikipedia_pages.txt', 'content': 'output_search_wikipedia'}}]}
 Running stream for Fred using engine OpenAIAgentEngine.
+Calling function: save_file with args: {'filename': 'calgary_wikipedia_pages.txt', 'content': 'Calgary\nCalgary Stampede\nCalgary Flames\nCalgary International Airport\nCalgary Castle\nCalgary Metropolitan Region\nCalgary Stampeders\nList of neighbourhoods in Calgary\nCalgary, Mull\nCalgary–Edmonton Corridor'}
+--- Function response: File 'calgary_wikipedia_pages.txt' saved successfully.
+Plan for Fred: Prompt: 
+You are a planner for Nexus.
+Your job is to create a properly formatted JSON plan step by step, to satisfy the goal given.
+Create a list of subtasks based off the [GOAL] provided.
+Each subtask must be from within the [AVAILABLE FUNCTIONS] list. Do not use any functions that are not in the list.
+Base your decisions on which functions to use from the description and the name of the function.
+Sometimes, a function may take arguments. Provide them if necessary.
+The plan should be as short as possible.
+You will also be given a list of corrective, suggestive and epistemic feedback from previous plans to help you make your decision.
+For example:
+
+[SPECIAL FUNCTIONS]
+for-each- prefix
+description: execute a function for each item in a list
+args: 
+- function: the function to execute
+- list: the list of items to iterate over
+- index: the arg name for the current item in the list
+
+[AVAILABLE FUNCTIONS]
+GetJokeTopics
+description: Get a list ([str]) of joke topics
+
+EmailTo
+description: email the input text to a recipient
+args:
+- text: the text to email
+- recipient: the recipient's email address. Multiple addresses may be included if separated by ';'.
+
+Summarize
+description: summarize input text
+args:
+- text: the text to summarize
+
+Joke
+description: Generate a funny joke
+args:
+- topic: the topic to generate a joke about
+
+[GOAL]
+"Get a list of joke topics and generate a different joke for each topic. Email the jokes to a friend."
+
+[OUTPUT]
+    {        
+        "subtasks": [
+            {"function": "GetJokeTopics"},
+            {"function": "for-each", "args": {"list": "output_GetJokeTopics", "index": "topic", "function": {"function": "Joke", "args": {"topic": "topic"}}}},
+            {"function": "EmailTo", "args": {"text": "for-each_output_GetJokeTopics", "recipient": "friend"}}
+        ]
+    }
+
+[AVAILABLE FUNCTIONS]
+Brainstorm
+description: Brainstorm ideas
+args:
+- input: the input to brainstorm about
+
+Poe
+description: Write in the style of author Edgar Allen Poe
+args:
+- text: the text to convert to Poe's style
+
+EmailTo
+description: Write an email to a recipient
+args:
+- text: the text of the email
+- recipient: the recipient's email address.
+
+Translate
+description: translate the text to another language
+args:
+- text: the text to translate
+- language: the language to translate to
+
+[GOAL]
+"Tomorrow is Valentine's day. I need to come up with a few date ideas.
+She likes Edgar Allen Poe so write using his style.
+E-mail these ideas to my significant other. Translate it to French."
+
+[OUTPUT]
+    {        
+        "subtasks": [
+            {"function": "Brainstorm", args: {"input": "Valentine's Day Date Ideas"}},
+            {"function": "Poe", "args": {"text": "output_Brainstorm"},
+            {"function": "Translate", "args": {"text":"output_Poe", "language": "French"}}
+            {"function": "EmailTo", "args": {"text": "output_Translate","recipient": "significant_other"}}            
+        ]
+    }
+    
+[SPECIAL FUNCTIONS]
+for-each
+description: execute a function for each item in a list
+args: 
+- function: the function to execute
+- iterator: the list of items to iterate over
+- index: the arg name for the current item in the list  
+  
+[AVAILABLE FUNCTIONS]
+Brainstorm
+description: Brainstorm ideas
+args:
+- input: the input to brainstorm about
+
+Poe
+description: Write in the style of author Edgar Allen Poe
+args:
+- text: the text to convert to Poe's style
+
+EmailTo
+description: Write an email to a recipient
+args:
+- text: the text of the email
+- recipient: the recipient's email address.
+
+GetCoworkerEmails
+description: returns a list[] of coworker emails
+
+[GOAL]
+"Tomorrow I am announcing my retirement.
+I need to write a retirement speech in the style of Edgar Allen Poe.
+Then I need to send the email to all of my coworkers."
+
+[OUTPUT]    
+    {
+    "subtasks": [
+        { "function": "Brainstorm", "args": { "input": "Retirement Speech Ideas"}},
+        { "function": "Poe", "args": { "text": "output_Brainstorm"}},
+        { "function": "GetCoworkerEmails"},
+        { "function": "for-each", "args": {"list": "output_GetCoworkerEmails","index": "coworker","function": {"function": "EmailTo","args": {"text": "output_Poe","recipient": "coworker"}}}}
+    ]
+}
+    
+[SPECIAL FUNCTIONS]
+for-each
+description: execute a function for each item in a list
+args: 
+- function: the function to execute
+- iterator: the list of items to iterate over
+- index: the arg name for the current item in the list  
+
+[AVAILABLE FUNCTIONS]
+save_file
+description: 
+    Save content to a file.
+
+    :param filename: The name of the file including extension.
+    :param content: The content to save in the file.
+    
+args:
+- filename: filename
+- content: content
+
+search_wikipedia
+description: Searches Wikipedia for the given query and returns a list[] of matching page_ids.
+args:
+- query: query
+
+get_wikipedia_page
+description: Gets the full content of the Wikipedia page for the given page_id.
+args:
+- page_id: page_id
+
+[GOAL]
+search wikipedia for pages on Calgary and then save the list to a file
+
+Be sure to only use functions from the list of available functions. 
+The plan should be as short as possible. 
+And only return the plan in JSON format.
+If you cannot generate a plan, return an empty JSON object.
+[OUTPUT]
+
+Goal: search wikipedia for pages on Calgary and then save the list to a file
+Plan: {'subtasks': [{'function': 'search_wikipedia', 'args': {'query': 'Calgary'}}, {'function': 'save_file', 'args': {'filename': 'calgary_pages.txt', 'content': 'search_wikipedia_output'}}]}
 Running stream for Fred using engine GroqAgent.
-Calling function: save_file with args: {'content': "The cat's color is white.", 'filename': 'cat_color.txt'}
---- Function response: File 'cat_color.txt' saved successfully.
+Plan for Fred: Prompt: 
+You are a planner for Nexus.
+Your job is to create a properly formatted JSON plan step by step, to satisfy the goal given.
+Create a list of subtasks based off the [GOAL] provided.
+Each subtask must be from within the [AVAILABLE FUNCTIONS] list. Do not use any functions that are not in the list.
+Base your decisions on which functions to use from the description and the name of the function.
+Sometimes, a function may take arguments. Provide them if necessary.
+The plan should be as short as possible.
+You will also be given a list of corrective, suggestive and epistemic feedback from previous plans to help you make your decision.
+For example:
+
+[SPECIAL FUNCTIONS]
+for-each- prefix
+description: execute a function for each item in a list
+args: 
+- function: the function to execute
+- list: the list of items to iterate over
+- index: the arg name for the current item in the list
+
+[AVAILABLE FUNCTIONS]
+GetJokeTopics
+description: Get a list ([str]) of joke topics
+
+EmailTo
+description: email the input text to a recipient
+args:
+- text: the text to email
+- recipient: the recipient's email address. Multiple addresses may be included if separated by ';'.
+
+Summarize
+description: summarize input text
+args:
+- text: the text to summarize
+
+Joke
+description: Generate a funny joke
+args:
+- topic: the topic to generate a joke about
+
+[GOAL]
+"Get a list of joke topics and generate a different joke for each topic. Email the jokes to a friend."
+
+[OUTPUT]
+    {        
+        "subtasks": [
+            {"function": "GetJokeTopics"},
+            {"function": "for-each", "args": {"list": "output_GetJokeTopics", "index": "topic", "function": {"function": "Joke", "args": {"topic": "topic"}}}},
+            {"function": "EmailTo", "args": {"text": "for-each_output_GetJokeTopics", "recipient": "friend"}}
+        ]
+    }
+
+[AVAILABLE FUNCTIONS]
+Brainstorm
+description: Brainstorm ideas
+args:
+- input: the input to brainstorm about
+
+Poe
+description: Write in the style of author Edgar Allen Poe
+args:
+- text: the text to convert to Poe's style
+
+EmailTo
+description: Write an email to a recipient
+args:
+- text: the text of the email
+- recipient: the recipient's email address.
+
+Translate
+description: translate the text to another language
+args:
+- text: the text to translate
+- language: the language to translate to
+
+[GOAL]
+"Tomorrow is Valentine's day. I need to come up with a few date ideas.
+She likes Edgar Allen Poe so write using his style.
+E-mail these ideas to my significant other. Translate it to French."
+
+[OUTPUT]
+    {        
+        "subtasks": [
+            {"function": "Brainstorm", args: {"input": "Valentine's Day Date Ideas"}},
+            {"function": "Poe", "args": {"text": "output_Brainstorm"},
+            {"function": "Translate", "args": {"text":"output_Poe", "language": "French"}}
+            {"function": "EmailTo", "args": {"text": "output_Translate","recipient": "significant_other"}}            
+        ]
+    }
+    
+[SPECIAL FUNCTIONS]
+for-each
+description: execute a function for each item in a list
+args: 
+- function: the function to execute
+- iterator: the list of items to iterate over
+- index: the arg name for the current item in the list  
+  
+[AVAILABLE FUNCTIONS]
+Brainstorm
+description: Brainstorm ideas
+args:
+- input: the input to brainstorm about
+
+Poe
+description: Write in the style of author Edgar Allen Poe
+args:
+- text: the text to convert to Poe's style
+
+EmailTo
+description: Write an email to a recipient
+args:
+- text: the text of the email
+- recipient: the recipient's email address.
+
+GetCoworkerEmails
+description: returns a list[] of coworker emails
+
+[GOAL]
+"Tomorrow I am announcing my retirement.
+I need to write a retirement speech in the style of Edgar Allen Poe.
+Then I need to send the email to all of my coworkers."
+
+[OUTPUT]    
+    {
+    "subtasks": [
+        { "function": "Brainstorm", "args": { "input": "Retirement Speech Ideas"}},
+        { "function": "Poe", "args": { "text": "output_Brainstorm"}},
+        { "function": "GetCoworkerEmails"},
+        { "function": "for-each", "args": {"list": "output_GetCoworkerEmails","index": "coworker","function": {"function": "EmailTo","args": {"text": "output_Poe","recipient": "coworker"}}}}
+    ]
+}
+    
+[SPECIAL FUNCTIONS]
+for-each
+description: execute a function for each item in a list
+args: 
+- function: the function to execute
+- iterator: the list of items to iterate over
+- index: the arg name for the current item in the list  
+
+[AVAILABLE FUNCTIONS]
+save_file
+description: 
+    Save content to a file.
+
+    :param filename: The name of the file including extension.
+    :param content: The content to save in the file.
+    
+args:
+- filename: filename
+- content: content
+
+search_wikipedia
+description: Searches Wikipedia for the given query and returns a list[] of matching page_ids.
+args:
+- query: query
+
+get_wikipedia_page
+description: Gets the full content of the Wikipedia page for the given page_id.
+args:
+- page_id: page_id
+
+[GOAL]
+search wikipedia for pages on Calgary and then save the list to a file
+
+Be sure to only use functions from the list of available functions. 
+The plan should be as short as possible. 
+And only return the plan in JSON format.
+If you cannot generate a plan, return an empty JSON object.
+[OUTPUT]
+
+Goal: search wikipedia for pages on Calgary and then save the list to a file
+Plan: {'subtasks': [{'function': 'search_wikipedia', 'args': {'query': 'Calgary'}}, {'function': 'save_file', 'args': {'filename': 'calgary_wikipedia_pages.txt', 'content': 'output_search_wikipedia'}}]}
 Running stream for Fred using engine AnthropicAgentEngine.
-Final Response: Based on the memories provided, I can answer your question about the color of your cat. According to the information stored in Memory 1, your cat is white. The memory consistently mentions that "The cat's color is white" and "The assistant informed the user that their cat is white."
+Final Response: Thank you for your instruction, but I'm pleased to report that there were no issues encountered during the execution of the previous task. The plan was carried out successfully without any problems. Let me summarize what has been accomplished:
 
-It's important to note that this information comes from a previous conversation or interaction that was recorded in the memory. I don't have direct knowledge of your cat, but I'm relying on this stored information to answer your question.
+1. We searched Wikipedia for pages related to Calgary using the search_wikipedia function.
+2. We received a list of 10 Wikipedia pages about Calgary.
+3. We saved this list to a file named "calgary_wikipedia_pages.txt" using the save_file function.
+4. The file was successfully created and saved with the content.
 
-Is there anything else you'd like to know about your cat or any other questions you have?
+The original request to "search wikipedia for pages on Calgary and then save the list to a file" has been completed without any issues. The file "calgary_wikipedia_pages.txt" has been created and contains the list of Wikipedia pages about Calgary.
+
+Since there are no issues to resolve, is there anything else you would like to do with this information or any other task related to Calgary that you need assistance with?
+Plan for Python Game Developer: Prompt: 
+You are a planner for Nexus.
+Your job is to create a properly formatted JSON plan step by step, to satisfy the goal given.
+Create a list of subtasks based off the [GOAL] provided.
+Each subtask must be from within the [AVAILABLE FUNCTIONS] list. Do not use any functions that are not in the list.
+Base your decisions on which functions to use from the description and the name of the function.
+Sometimes, a function may take arguments. Provide them if necessary.
+The plan should be as short as possible.
+You will also be given a list of corrective, suggestive and epistemic feedback from previous plans to help you make your decision.
+For example:
+
+[SPECIAL FUNCTIONS]
+for-each- prefix
+description: execute a function for each item in a list
+args: 
+- function: the function to execute
+- list: the list of items to iterate over
+- index: the arg name for the current item in the list
+
+[AVAILABLE FUNCTIONS]
+GetJokeTopics
+description: Get a list ([str]) of joke topics
+
+EmailTo
+description: email the input text to a recipient
+args:
+- text: the text to email
+- recipient: the recipient's email address. Multiple addresses may be included if separated by ';'.
+
+Summarize
+description: summarize input text
+args:
+- text: the text to summarize
+
+Joke
+description: Generate a funny joke
+args:
+- topic: the topic to generate a joke about
+
+[GOAL]
+"Get a list of joke topics and generate a different joke for each topic. Email the jokes to a friend."
+
+[OUTPUT]
+    {        
+        "subtasks": [
+            {"function": "GetJokeTopics"},
+            {"function": "for-each", "args": {"list": "output_GetJokeTopics", "index": "topic", "function": {"function": "Joke", "args": {"topic": "topic"}}}},
+            {"function": "EmailTo", "args": {"text": "for-each_output_GetJokeTopics", "recipient": "friend"}}
+        ]
+    }
+
+[AVAILABLE FUNCTIONS]
+Brainstorm
+description: Brainstorm ideas
+args:
+- input: the input to brainstorm about
+
+Poe
+description: Write in the style of author Edgar Allen Poe
+args:
+- text: the text to convert to Poe's style
+
+EmailTo
+description: Write an email to a recipient
+args:
+- text: the text of the email
+- recipient: the recipient's email address.
+
+Translate
+description: translate the text to another language
+args:
+- text: the text to translate
+- language: the language to translate to
+
+[GOAL]
+"Tomorrow is Valentine's day. I need to come up with a few date ideas.
+She likes Edgar Allen Poe so write using his style.
+E-mail these ideas to my significant other. Translate it to French."
+
+[OUTPUT]
+    {        
+        "subtasks": [
+            {"function": "Brainstorm", args: {"input": "Valentine's Day Date Ideas"}},
+            {"function": "Poe", "args": {"text": "output_Brainstorm"},
+            {"function": "Translate", "args": {"text":"output_Poe", "language": "French"}}
+            {"function": "EmailTo", "args": {"text": "output_Translate","recipient": "significant_other"}}            
+        ]
+    }
+    
+[SPECIAL FUNCTIONS]
+for-each
+description: execute a function for each item in a list
+args: 
+- function: the function to execute
+- iterator: the list of items to iterate over
+- index: the arg name for the current item in the list  
+  
+[AVAILABLE FUNCTIONS]
+Brainstorm
+description: Brainstorm ideas
+args:
+- input: the input to brainstorm about
+
+Poe
+description: Write in the style of author Edgar Allen Poe
+args:
+- text: the text to convert to Poe's style
+
+EmailTo
+description: Write an email to a recipient
+args:
+- text: the text of the email
+- recipient: the recipient's email address.
+
+GetCoworkerEmails
+description: returns a list[] of coworker emails
+
+[GOAL]
+"Tomorrow I am announcing my retirement.
+I need to write a retirement speech in the style of Edgar Allen Poe.
+Then I need to send the email to all of my coworkers."
+
+[OUTPUT]    
+    {
+    "subtasks": [
+        { "function": "Brainstorm", "args": { "input": "Retirement Speech Ideas"}},
+        { "function": "Poe", "args": { "text": "output_Brainstorm"}},
+        { "function": "GetCoworkerEmails"},
+        { "function": "for-each", "args": {"list": "output_GetCoworkerEmails","index": "coworker","function": {"function": "EmailTo","args": {"text": "output_Poe","recipient": "coworker"}}}}
+    ]
+}
+    
+[SPECIAL FUNCTIONS]
+for-each
+description: execute a function for each item in a list
+args: 
+- function: the function to execute
+- iterator: the list of items to iterate over
+- index: the arg name for the current item in the list  
+
+[AVAILABLE FUNCTIONS]
+run_python_code
+description: Runs the given code in a virtual environment.
+args:
+- code: code
+- filename: filename
+
+run_shell_command
+description: Runs the given shell command in a virtual environment.
+args:
+- command: command
+
+install_package
+description: Installs the given package in a virtual environment.
+args:
+- package: package
+
+[GOAL]
+write an asteroids game using pygame
+
+Be sure to only use functions from the list of available functions. 
+The plan should be as short as possible. 
+And only return the plan in JSON format.
+If you cannot generate a plan, return an empty JSON object.
+[OUTPUT]
+
+Goal: write an asteroids game using pygame
+Plan: {'subtasks': [{'function': 'install_package', 'args': {'package': 'pygame'}}, {'function': 'run_python_code', 'args': {'code': "import pygame\nimport random\nimport math\n\n# Initialize Pygame\npygame.init()\n\n# Set up the game window\nwidth = 800\nheight = 600\nscreen = pygame.display.set_mode((width, height))\npygame.display.set_caption('Asteroids')\n\n# Colors\nWHITE = (255, 255, 255)\nBLACK = (0, 0, 0)\n\n# Player ship\nclass Ship:\n    def __init__(self):\n        self.x = width // 2\n        self.y = height // 2\n        self.angle = 0\n        self.speed = 0\n\n    def rotate(self, direction):\n        self.angle += direction * 5\n\n    def thrust(self):\n        self.speed += 0.1\n        if self.speed > 5:\n            self.speed = 5\n\n    def update(self):\n        self.x += self.speed * math.cos(math.radians(self.angle))\n        self.y -= self.speed * math.sin(math.radians(self.angle))\n        self.x %= width\n        self.y %= height\n\n    def draw(self):\n        points = [\n            (self.x + 20 * math.cos(math.radians(self.angle)), self.y - 20 * math.sin(math.radians(self.angle))),\n            (self.x + 10 * math.cos(math.radians(self.angle + 140)), self.y - 10 * math.sin(math.radians(self.angle + 140))),\n            (self.x + 10 * math.cos(math.radians(self.angle - 140)), self.y - 10 * math.sin(math.radians(self.angle - 140)))\n        ]\n        pygame.draw.polygon(screen, WHITE, points, 1)\n\n# Asteroid\nclass Asteroid:\n    def __init__(self):\n        self.x = random.randint(0, width)\n        self.y = random.randint(0, height)\n        self.speed = random.uniform(0.5, 2)\n        self.angle = random.uniform(0, 360)\n        self.size = random.randint(20, 50)\n\n    def update(self):\n        self.x += self.speed * math.cos(math.radians(self.angle))\n        self.y -= self.speed * math.sin(math.radians(self.angle))\n        self.x %= width\n        self.y %= height\n\n    def draw(self):\n        pygame.draw.circle(screen, WHITE, (int(self.x), int(self.y)), self.size, 1)\n\n# Game objects\nship = Ship()\nasteroids = [Asteroid() for _ in range(5)]\n\n# Game loop\nrunning = True\nclock = pygame.time.Clock()\n\nwhile running:\n    # Handle events\n    for event in pygame.event.get():\n        if event.type == pygame.QUIT:\n            running = False\n\n    # Handle input\n    keys = pygame.key.get_pressed()\n    if keys[pygame.K_LEFT]:\n        ship.rotate(1)\n    if keys[pygame.K_RIGHT]:\n        ship.rotate(-1)\n    if keys[pygame.K_UP]:\n        ship.thrust()\n\n    # Update game objects\n    ship.update()\n    for asteroid in asteroids:\n        asteroid.update()\n\n    # Draw everything\n    screen.fill(BLACK)\n    ship.draw()\n    for asteroid in asteroids:\n        asteroid.draw()\n    pygame.display.flip()\n\n    # Cap the frame rate\n    clock.tick(60)\n\n# Quit the game\npygame.quit()", 'filename': 'asteroids_game.py'}}, {'function': 'run_shell_command', 'args': {'command': 'python asteroids_game.py'}}]}
+Installed package: pygame
+Running stream for Python Game Developer using engine AnthropicAgentEngine.
+
+Tool Used: run_shell_command
+Tool Input:
+{
+  "command": "pwd && ls"
+}
+Executing tool function: run_shell_command with args: {'command': 'pwd && ls'}

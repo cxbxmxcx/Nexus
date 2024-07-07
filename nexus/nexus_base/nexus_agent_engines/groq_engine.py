@@ -226,6 +226,17 @@ class GroqAgent(BaseAgentEngine):
         )
         return str(response.choices[0].message.content)
 
+    def execute_step_prompt(self, system, steps):
+        messages = self.inject_system_message(steps, system)
+
+        response = self.client.chat.completions.create(
+            model=self.model,
+            messages=messages,
+            temperature=self.temperature,
+            max_tokens=self.max_tokens,
+        )
+        return str(response.choices[0].message.content)
+
     def get_response_stream(self, user_input, thread_id=None):
         self.last_message = ""
         self.messages += [{"role": "user", "content": user_input}]

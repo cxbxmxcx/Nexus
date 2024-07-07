@@ -51,6 +51,7 @@ class EnvironmentManager:
 
     def run_code(self, code, filename=None):
         if not filename:
+            return "Please provide a filename for the code.", ""
             timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
             filename = f"code_{timestamp}.py"
         filepath = os.path.join(self.env_path, filename)

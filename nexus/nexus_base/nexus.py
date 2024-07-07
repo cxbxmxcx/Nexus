@@ -457,6 +457,13 @@ class Nexus:
         return self.knowledge_manager.examine_documents(knowledge_store)
 
     def apply_knowledge_RAG(self, knowledge_store, input_text, n_results=5):
+        if (
+            knowledge_store is None
+            or knowledge_store == ""
+            or knowledge_store == "None"
+            or input_text is None
+        ):
+            return ""
         return self.knowledge_manager.apply_knowledge_RAG(
             knowledge_store, input_text, n_results
         )
@@ -493,7 +500,12 @@ class Nexus:
         return self.memory_manager.examine_memories(memory_store)
 
     def apply_memory_RAG(self, memory_store, input_text, agent, n_results=5):
-        if memory_store is None or memory_store == "None" or input_text is None:
+        if (
+            memory_store is None
+            or memory_store == ""
+            or memory_store == "None"
+            or input_text is None
+        ):
             return ""
         memory_store = MemoryStore.get(MemoryStore.name == memory_store)
         memory_function = self.get_memory_function(memory_store.memory_type)
@@ -524,7 +536,12 @@ class Nexus:
             return True
 
     def append_memory(self, memory_store, user_input, llm_response, agent_engine_name):
-        if memory_store is None or user_input is None:
+        if (
+            memory_store is None
+            or memory_store == ""
+            or memory_store == "None"
+            or user_input is None
+        ):
             return None
         memory_store = MemoryStore.get(MemoryStore.name == memory_store)
         memory_function = self.get_memory_function(memory_store.memory_type)
@@ -616,31 +633,42 @@ class Nexus:
 
         if agent.planning is not None and agent.planning != "None":
             planner = self.get_planner(agent.planning)
-            plan = planner.create_plan(self, agent, messages[-1]["content"])
+            try:
+                plan = planner.create_plan(self, agent, messages[-1]["content"])
+            except Exception as e:
+                print(f"Error creating plan: {e}")
+                plan = None
+                post_message("assistant", f"Error creating plan: {e}")
 
             if plan is not None:
                 print(f"Plan for {agent.name}: {plan}")
-                output = planner.execute_plan(self, agent, plan)
-                output = dict(plan=plan, output=output)
-                content = f"""
-                You created a plan to solve the goal and executed it.
-                The results are below:
-                {json.dumps(output, default=str)}
-                Please summarize the output and suggest next steps.
-                """
-                plan_output = {
-                    "role": "assistant",
-                    "content": content,
-                }
-                post_message("assistant", content)
-                messages.append(plan_output)
-                next_task = {
-                    "role": "user",
-                    "content": "summarize the results and suggest next steps.",
-                }
-                post_message("user", "summarize the results and suggest next steps.")
-                messages.append(next_task)
-                use_tools = False
+                try:
+                    output = planner.execute_plan(self, agent, plan)
+                    output = dict(plan=plan, output=output)
+                    content = f"""
+                    The plan was generated to solve the goal and executed it.
+                    The results are below:
+                    {json.dumps(output, default=str)}                
+                    """
+                    plan_output = {
+                        "role": "assistant",
+                        "content": content,
+                    }
+                    post_message("assistant", content)
+                    messages.append(plan_output)
+                    next_task = {
+                        "role": "user",
+                        "content": "resolve any issues you encountered and continue.",
+                    }
+                    post_message(**next_task)
+                    messages.append(next_task)
+                    use_tools = True
+                except Exception as e:
+                    print(f"Error executing plan: {e}")
+                    output = f"Error executing plan: {e}"
+                    output = dict(plan=plan, output=output)
+                    post_message("assistant", output)
+                    use_tools = True
 
         engine.configure_engine_settings(agent.engine_settings)
         selected_actions = self.get_actions(agent.actions)
@@ -657,6 +685,13 @@ class Nexus:
         engine.actions = selected_actions
         engine.configure_engine_settings(agent.engine_settings)
         return engine.execute_prompt(prompt)
+
+    def execute_step_prompt(self, agent, system, steps):
+        engine = self.get_agent_engine(agent)
+        selected_actions = self.get_actions(agent.actions)
+        engine.actions = selected_actions
+        engine.configure_engine_settings(agent.engine_settings)
+        return engine.execute_step_prompt(system, steps)
 
     def execute_action(self, agent, action_name, args):
         action = self.action_manager.get_action(action_name)

@@ -79,6 +79,10 @@ class BaseAgentEngine:
         # Placeholder method to execute a prompt, to be implemented by subclasses
         raise NotImplementedError("This method should be implemented by subclasses.")
 
+    def execute_step_prompt(self, system, prompt, steps):
+        # Placeholder method to execute a prompt, to be implemented by subclasses
+        raise NotImplementedError("This method should be implemented by subclasses.")
+
     def get_response_stream(self, user_input, thread_id=None):
         # Placeholder method for streaming responses, to be implemented by subclasses
         raise NotImplementedError("This method should be implemented by subclasses.")

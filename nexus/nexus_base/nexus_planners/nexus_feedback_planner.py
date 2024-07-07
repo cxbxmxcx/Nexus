@@ -2,6 +2,8 @@
 
 """A basic JSON-based planner for Nexus"""
 
+import json
+
 from nexus.nexus_base.planner_manager import NexusPlanner, Plan
 from nexus.nexus_base.prompt_template_manager import PromptTemplateManager
 
@@ -173,9 +175,9 @@ def format_action(action):
     return result
 
 
-class BasicNexusPlanner(NexusPlanner):
+class NexusFeedbackPlanner(NexusPlanner):
     """
-    Basic JSON-based planner for the Nexus.
+    Nexus JSON-based feedback planner.
     """
 
     def __init__(self):
@@ -204,8 +206,28 @@ class BasicNexusPlanner(NexusPlanner):
         return Plan(prompt=prompt, goal=goal, plan_text=plan_text)
 
     def execute_plan(self, nexus, agent, plan: Plan) -> str:
-        context = {}
+        context = dict(steps=[])
+
+        system = """
+        Original request: {{$goal}}
+        You are in the process of helping the user fulfill this request using the following plan:
+        {{$plan}}
+        The user will ask you for help with each step.
+        """
+        ptm = PromptTemplateManager()
+        system_context = dict(goal=plan.goal, plan=json.dumps(plan.generated_plan))
+        system = ptm.render_prompt(system, system_context)
+
         plan = plan.generated_plan
+
+        def append_steps(steps, task, result):
+            user_step = f"The following step in the plan was executed: {json.dumps(task)}\nwith the result of: {result}"
+            steps += [{"role": "user", "content": user_step}]
+            result = nexus.execute_step_prompt(agent, system, steps)
+            assistant_step = f"The result of executing the task was: {str(result)}"
+            steps += [{"role": "assistant", "content": assistant_step}]
+            return steps
+
         for task in plan["subtasks"]:
             if task["function"] == "for-each":
                 list_name = task["args"]["list"]
@@ -216,6 +238,8 @@ class BasicNexusPlanner(NexusPlanner):
                 for item in list_value:
                     context[index_name] = item
                     result = nexus.execute_task(agent, inner_task, context)
+                    context["steps"] = append_steps(context["steps"], task, result)
+                    # apply feedback
                     context[f"for-each_{list_name}_{item}"] = result
 
                 # Collect all results of for-each in a single list
@@ -229,6 +253,7 @@ class BasicNexusPlanner(NexusPlanner):
 
             else:
                 result = nexus.execute_task(agent, task, context)
+                context["steps"] = append_steps(context["steps"], task, result)
                 context[f"output_{task['function']}"] = result
 
         return context

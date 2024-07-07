@@ -47,7 +47,7 @@ class KnowledgeManager:
         return self.embedding_manager.get_embedding(text)
 
     def query_documents(self, knowledge_store, input_text, n_results=5):
-        if knowledge_store is None or input_text is None:
+        if knowledge_store is None or knowledge_store == "" or input_text is None:
             return None
 
         chroma_client = chromadb.PersistentClient(path=self.CHROMA_DB)
@@ -59,7 +59,7 @@ class KnowledgeManager:
         return docs["documents"]
 
     def apply_knowledge_RAG(self, knowledge_store, input_text, n_results=5):
-        if knowledge_store is None or input_text is None:
+        if knowledge_store is None or knowledge_store == "" or input_text is None:
             return None
 
         docs = self.query_documents(knowledge_store, input_text, n_results)
