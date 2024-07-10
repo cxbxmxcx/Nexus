@@ -9,6 +9,7 @@ class BaseAgentEngine:
     _supports_actions = False
     _supports_memory = False
     _supports_knowledge = False
+    _supports_planning = False
 
     def __init__(self, chat_history=None):
         self._chat_history = chat_history or []
@@ -159,6 +160,14 @@ class BaseAgentEngine:
     @property
     def supports_knowledge(self):
         return self.get_supports_knowledge()
+
+    @classmethod
+    def get_supports_planning(cls):
+        return cls._supports_planning
+
+    @property
+    def supports_planning(self):
+        return self.get_supports_planning()
 
 
 def get_nested_attr(obj, attr_path):

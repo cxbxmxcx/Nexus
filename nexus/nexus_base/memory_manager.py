@@ -148,13 +148,19 @@ class MemoryManager:
         return True
 
     def append_memory(
-        self, memory_store, user_input, llm_response, memory_function=None, engine=None
+        self,
+        memory_store,
+        user_input,
+        llm_response,
+        memory_function=None,
+        engine=None,
+        memory_prompt=None,
     ):
         if (
             memory_store is None
             or user_input is None
             or engine is None
-            or memory_function is None
+            or (memory_function is None and memory_prompt is None)
         ):
             return False
 
@@ -173,10 +179,11 @@ class MemoryManager:
             {llm_response}
             """
 
+        memory_prompt = (
+            memory_prompt if memory_prompt else memory_function.function_prompt
+        )
         try:
-            memories = engine.get_semantic_response(
-                memory_function.function_prompt, memory
-            )
+            memories = engine.get_semantic_response(memory_prompt, memory)
             memories, code = extract_code(memories)
             if code:
                 memories = code[0][1]
@@ -199,7 +206,7 @@ class MemoryManager:
 
             return True
         except Exception as e:
-            print("Error appending memory: ", e)
+            print("Error appending memory: ", str(e))
             return False
 
     def compress_memories(

@@ -535,7 +535,14 @@ class Nexus:
             memory_store.save()
             return True
 
-    def append_memory(self, memory_store, user_input, llm_response, agent_engine_name):
+    def append_memory(
+        self,
+        memory_store,
+        user_input,
+        llm_response,
+        agent_engine_name,
+        memory_prompt=None,
+    ):
         if (
             memory_store is None
             or memory_store == ""
@@ -548,7 +555,12 @@ class Nexus:
         self.set_tracking_function("memory:append")
         agent_engine = self.get_agent_engine_by_name(agent_engine_name)
         result = self.memory_manager.append_memory(
-            memory_store, user_input, llm_response, memory_function, agent_engine
+            memory_store,
+            user_input,
+            llm_response,
+            memory_function,
+            agent_engine,
+            memory_prompt=memory_prompt,
         )
         self.set_tracking_function("Not Set")
         return result
@@ -624,6 +636,22 @@ class Nexus:
         def stream_complete(output):
             # update memory if needed
             if agent.memory is not None and agent.memory != "None":
+                # if agent.feedback is not None and agent.feedback != "":
+                #     ptm = PromptTemplateManager()
+                #     output = f"""
+                #     Details of the internal conversation: {json.dumps(messages, default=str)}
+                #     The final output of the conversation: {output}
+                #     """
+                #     feedback = ptm.render_prompt(
+                #         agent.feedback, dict(input=input_content, output=output)
+                #     )
+                #     self.append_memory(
+                #         agent.memory,
+                #         input_content,
+                #         feedback,
+                #         agent.engine,
+                #     )
+
                 self.append_memory(
                     agent.memory,
                     input_content,
@@ -631,7 +659,11 @@ class Nexus:
                     agent.engine,
                 )
 
-        if agent.planning is not None and agent.planning != "None":
+        if (
+            engine.supports_planning
+            and agent.planning is not None
+            and agent.planning != "None"
+        ):
             planner = self.get_planner(agent.planning)
             try:
                 plan = planner.create_plan(self, agent, messages[-1]["content"])
@@ -640,7 +672,7 @@ class Nexus:
                 plan = None
                 post_message("assistant", f"Error creating plan: {e}")
 
-            if plan is not None:
+            if plan is not None and engine.supports_planning:
                 print(f"Plan for {agent.name}: {plan}")
                 try:
                     output = planner.execute_plan(self, agent, plan)
@@ -662,7 +694,7 @@ class Nexus:
                     }
                     post_message(**next_task)
                     messages.append(next_task)
-                    use_tools = True
+                    use_tools = not engine.supports_planning
                 except Exception as e:
                     print(f"Error executing plan: {e}")
                     output = f"Error executing plan: {e}"
@@ -670,11 +702,6 @@ class Nexus:
                     post_message("assistant", output)
                     post_message("user", "please resolve any issues and try again.")
                     use_tools = True
-
-        if agent.feedback is not None and agent.feedback != "":
-            feedback = self.execute_prompt(agent, agent.feedback)
-            post_message("assistant", feedback)
-            messages.append({"role": "assistant", "content": feedback})
 
         engine.configure_engine_settings(agent.engine_settings)
         selected_actions = self.get_actions(agent.actions)

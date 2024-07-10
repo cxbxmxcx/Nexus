@@ -203,6 +203,7 @@ class NexusStepwisePlanner(NexusPlanner):
         prompt = ptm.render_prompt(prompt, context)
 
         plan_text = nexus.execute_prompt(agent, prompt)
+
         return Plan(prompt=prompt, goal=goal, plan_text=plan_text)
 
     def execute_plan(self, nexus, agent, plan: Plan) -> str:
@@ -222,6 +223,8 @@ class NexusStepwisePlanner(NexusPlanner):
 
         def append_steps(steps, task, result):
             user_step = f"The following step in the plan was executed: {json.dumps(task)}\nwith the result of: {result}"
+            if agent.feedback:
+                user_step += f"\nFeedback: {agent.feedback}"
             steps += [{"role": "user", "content": user_step}]
             result = nexus.execute_step_prompt(agent, system, steps)
             assistant_step = f"The result of executing the task was: {str(result)}"

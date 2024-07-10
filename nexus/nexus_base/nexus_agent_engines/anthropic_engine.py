@@ -11,11 +11,10 @@ load_dotenv()  # loading and setting the api key can be done in one step
 
 
 class AnthropicAgentEngine(BaseAgentEngine):
-    _supports_actions = (
-        False  # anthropic tool use is still in alpha, not going to touch it yet
-    )
+    _supports_actions = True
     _supports_knowledge = True
     _supports_memory = True
+    _supports_planning = False
 
     def __init__(self, chat_history=None):
         super().__init__(chat_history)
@@ -163,6 +162,7 @@ class AnthropicAgentEngine(BaseAgentEngine):
 
             print(f"Final Response: {final_response}")
 
+            stream_complete(final_response)
             yield final_response
 
         else:

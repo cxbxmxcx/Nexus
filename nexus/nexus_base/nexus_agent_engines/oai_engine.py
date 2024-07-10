@@ -13,6 +13,7 @@ class OpenAIAgentEngine(BaseAgentEngine):
     _supports_actions = True
     _supports_knowledge = True
     _supports_memory = True
+    _supports_planning = True
 
     def __init__(self, chat_history=None):
         super().__init__(chat_history)
@@ -125,6 +126,7 @@ class OpenAIAgentEngine(BaseAgentEngine):
                 if chunk.choices[0].delta.content is not None:
                     partial_message += chunk.choices[0].delta.content
                     yield partial_message
+            stream_complete(partial_message)
             return  # Exit the function since streaming is complete
 
         response_message = response.choices[0].message
@@ -170,21 +172,11 @@ class OpenAIAgentEngine(BaseAgentEngine):
 
         last_response = str(response_message.content)
         msg = ""
-        # continue_stream = False
-        # if "CONTINUE" in last_response:
-        #     last_response = last_response.replace("CONTINUE", "")
-        #     continue_stream = True
 
         for character in last_response:
             msg += character
             yield msg
 
-        # if continue_stream:
-        #     messages.append({"role": "assistant", "content": last_response})
-        #     messages.append({"role": "user", "content": "proceed"})
-        #     generator = self.run_stream(None, messages, use_tools)
-        #     for response in generator:
-        #         yield response
         stream_complete(last_response)
         return
 

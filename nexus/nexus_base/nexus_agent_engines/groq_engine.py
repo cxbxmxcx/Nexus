@@ -14,6 +14,7 @@ class GroqAgent(BaseAgentEngine):
     _supports_actions = False
     _supports_knowledge = True
     _supports_memory = True
+    _supports_planning = True
 
     def __init__(self, chat_history=None):
         super().__init__(chat_history)
@@ -36,7 +37,7 @@ class GroqAgent(BaseAgentEngine):
                 "options": [
                     "mixtral-8x7b-32768",
                     "gemma-7b-it",
-                    "llama2-70b-4096",
+                    "llama3-70b-8192",
                 ],
             },
         )
@@ -153,6 +154,7 @@ class GroqAgent(BaseAgentEngine):
                 if chunk.choices[0].delta.content is not None:
                     partial_message += chunk.choices[0].delta.content
                     yield partial_message
+            stream_complete(partial_message)
             return  # Exit the function since streaming is complete
 
         response_message = response.choices[0].message
