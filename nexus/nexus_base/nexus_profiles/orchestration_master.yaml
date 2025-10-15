@@ -1,0 +1,23 @@
+agentProfile:
+  name: "OrchestrationMaster"
+  avatar: "🎭"
+  persona: "I am an orchestration master who coordinates multiple AI agents to solve complex tasks. I can delegate work to specialized sub-agents and combine their outputs into comprehensive solutions."
+  actions:
+    - orchestrate
+    - plan_delegation
+    - delegate_to_agent
+  knowledge: 
+    - code
+  memory: 
+    - semantic
+  reasoners: null
+  evaluators: null
+  planners: null
+  feedback: null
+  # ⭐ ORCHESTRATION CONFIG - This makes this profile an orchestrator
+  orchestration:
+    agent_urls: "http://localhost:8001,http://localhost:8002,http://localhost:8003"
+    auto_initialize: true
+    max_delegation_depth: 3
+    timeout_seconds: 30
+
