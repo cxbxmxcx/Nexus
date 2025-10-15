@@ -1,118 +1,224 @@
+"""
+Agent Chat for Nexus Streamlit UI with A2A Orchestration Mode
+
+⭐ ENHANCED VERSION - Replace: nexus/streamlit_ui/agent_chat.py
+"""
+
 import streamlit as st
 
-from nexus.streamlit_ui.agent_panel import agent_panel
-from nexus.streamlit_ui.cache import get_nexus
+# ✅ ADDED: Import fallbacks
+try:
+    from streamlit_ui.agent_panel import agent_panel
+    from streamlit_ui.chat_history import display_chat_history  
+    from streamlit_ui.ui_helpers import get_nexus
+except ImportError:
+    try:
+        from nexus.streamlit_ui.agent_panel import agent_panel
+        from nexus.streamlit_ui.chat_history import display_chat_history
+        from nexus.streamlit_ui.ui_helpers import get_nexus
+    except ImportError:
+        from .agent_panel import agent_panel
+        from .chat_history import display_chat_history
+        from .ui_helpers import get_nexus
 
 
 def chat_page(username, win_height):
-    chat = get_nexus()
-    user = chat.get_participant(username)
+    """Main chat page with A2A orchestration support and loading states."""
+
+    # ✅ ADDED: Loading state for Nexus initialization
+    with st.spinner("🔄 Initializing Nexus..."):
+        chat = get_nexus()
+        user = chat.get_participant(username)
+
     if user is None:
-        st.error("Invalid user")
+        st.error("❌ Invalid user")
         st.stop()
 
-    # Initialize session state for threads and current_thread_id if not already present
-    if "threads" not in st.session_state:
-        threads = chat.get_threads_for_user(username)
-        st.session_state["threads"] = threads
+    # Initialize session state
+    if "a2a_mode" not in st.session_state:
+        st.session_state["a2a_mode"] = False
+
     if "current_thread_id" not in st.session_state:
         st.session_state["current_thread_id"] = None
 
-    def select_thread(thread_id):
-        st.session_state["current_thread_id"] = thread_id
-        thread_history = chat.read_messages(thread_id)
-        # Here, we find the thread by ID and set its 'agent' attribute
-        for thread in st.session_state["threads"]:
-            if thread.thread_id == thread_id:
-                thread.agent = None
-                break
+    # Layout
+    col1, col2 = st.columns([1, 2], gap="medium")
 
-    def create_new_thread():
-        new_thread_id = (
-            len(st.session_state["threads"]) + 1 if st.session_state["threads"] else 1
+    with col1:
+        st.title("Nexus -> Agents")
+
+        # A2A Toggle with loading feedback
+        a2a_mode = st.toggle(
+            "🎭 A2A Orchestration Mode",
+            value=st.session_state["a2a_mode"],
+            help="Enable to use orchestrator profiles that coordinate multiple A2A agents",
+            key="a2a_mode"
         )
-        thread = chat.create_thread(f"Chat: {new_thread_id}", username)
-        st.session_state["threads"].insert(0, thread)
-        select_thread(thread.thread_id)
 
-    st.sidebar.title("Nexus -> Agents")
-    with st.sidebar.container(height=win_height - 300):
-        st.button("+ New Chat", on_click=create_new_thread)
-        # Sidebar UI for thread management
+        # ✅ ADDED: Better mode info with loading states
+        if a2a_mode:
+            # Check orchestration requirements
+            with st.spinner("🔍 Checking A2A requirements..."):
+                try:
+                    from nexus.streamlit_ui.ui_helpers import check_orchestration_requirements
+                    missing = check_orchestration_requirements()
+                    if missing:
+                        st.error("❌ Missing A2A requirements")
+                        for req in missing:
+                            st.code(f"pip install {req}")
+                        st.stop()
+                    else:
+                        st.success("🎭 **Orchestration Mode Active**")
+                        st.info("Orchestrator profiles coordinate multiple A2A sub-agents to handle complex tasks.")
+                except Exception as e:
+                    st.warning(f"⚠️ Could not verify A2A requirements: {e}")
+                    st.info("🎭 **Orchestration Mode Active** (requirements not verified)")
+        else:
+            st.info("🤖 **Standard Agent Mode**\n\nDirect interaction with individual agent profiles.")
 
-        st.header("Recent chats")
-        for thread in st.session_state["threads"]:
-            if st.button(thread.title, key=thread.thread_id):
-                select_thread(thread.thread_id)
+        # ✅ ADDED: Loading state for agent panel
+        with st.spinner("🔄 Loading agent profiles..."):
+            chat_agent = agent_panel(chat)
 
-    # Main chat UI
-    if st.session_state["current_thread_id"] is not None:
-        current_thread = chat.get_thread(st.session_state["current_thread_id"])
-        if current_thread:
-            # chat_agent = current_thread.agent
+        if chat_agent is None:
+            st.stop()
 
-            with st.container():
-                col_chat, col_agent = st.columns([4, 2])
+        # Store current agent in session state
+        st.session_state["current_chat_agent"] = chat_agent
 
-                with col_chat:
-                    st.title(current_thread.title)
-                    with st.container(height=win_height - 300):
-                        messages = chat.read_messages(current_thread.thread_id)
-                        for message in messages:
-                            with st.chat_message(
-                                message.author.username, avatar=message.author.avatar
-                            ):
-                                st.markdown(message.content)
+    with col2:
+        st.title(f"Chat with {chat_agent.profile.avatar} {chat_agent.profile.name}")
 
-                        placeholder = st.empty()
+        # Show orchestration status if in A2A mode
+        if a2a_mode and hasattr(chat_agent.profile, 'orchestration') and chat_agent.profile.orchestration:
+            orchestration_config = chat_agent.profile.orchestration
 
-                    user_input = st.chat_input(
-                        "Type your message here:", key="msg_input"
-                    )
+            with st.expander("🎭 Orchestration Configuration", expanded=False):
+                col_a, col_b = st.columns(2)
 
-                with col_agent:
-                    chat_agent = agent_panel(chat)
-                chat_agent.chat_history = messages
-                chat_avatar = chat_agent.profile.avatar
+                with col_a:
+                    st.metric("Max Depth", orchestration_config.get('max_delegation_depth', 3))
+                    st.metric("Timeout (sec)", orchestration_config.get('timeout_seconds', 30))
 
-                if user_input:
-                    with placeholder.container():
-                        with st.chat_message(username, avatar=user.avatar):
-                            st.markdown(user_input)
-                            chat.post_message(
-                                current_thread.thread_id, username, "user", user_input
-                            )
+                with col_b:
+                    auto_init = orchestration_config.get('auto_initialize', False)
+                    st.metric("Auto Initialize", "✅" if auto_init else "❌")
+                    agent_urls = orchestration_config.get('agent_urls', '')
+                    agent_count = len([u for u in agent_urls.split(',') if u.strip()])
+                    st.metric("Configured Agents", agent_count)
 
-                        with st.chat_message(chat_agent.name, avatar=chat_avatar):
-                            with st.spinner(text="The agent is thinking..."):
-                                chat.set_tracking_id(
-                                    f"chat:thread{current_thread.thread_id}:{username}"
-                                )
-                                knowledge_rag = chat.apply_knowledge_RAG(
-                                    chat_agent.knowledge_store, user_input
-                                )
-                                memory_rag = chat.apply_memory_RAG(
-                                    chat_agent.memory_store, user_input, chat_agent
-                                )
-                                content = user_input + knowledge_rag + memory_rag
-                                st.write_stream(
-                                    chat_agent.get_response_stream(
-                                        content, current_thread.id
-                                    )
-                                )
-                            if chat_agent.memory_store != "None":
-                                chat.append_memory(
-                                    chat_agent.memory_store,
-                                    user_input,
-                                    chat_agent.last_message,
-                                    chat_agent,
-                                )
-                            chat.set_tracking_id("Not set")
-                            chat.post_message(
-                                current_thread.thread_id,
-                                chat_agent.name,
-                                "agent",
-                                chat_agent.last_message,
-                            )
+                # ✅ ADDED: Real-time orchestration status
+                if st.button("🔄 Refresh Status"):
+                    with st.spinner("🔍 Checking orchestration status..."):
+                        try:
+                            from nexus.nexus_base.nexus_actions.orchestration_actions import get_orchestration_status
+                            status = get_orchestration_status(_caller_agent=chat_agent)
+                            st.success("Status updated!")
+                            st.info(status)
+                        except Exception as e:
+                            st.error(f"Status check failed: {e}")
 
-                    st.rerun()
+        # Get or create thread with loading
+        thread_id = st.session_state.get("current_thread_id")
+        if not thread_id:
+            with st.spinner("🔄 Creating chat thread..."):
+                thread = chat.create_thread(
+                    f"Chat_{username}_{chat_agent.profile.name}",
+                    username,
+                    type="agent"
+                )
+                thread_id = thread.thread_id
+                st.session_state["current_thread_id"] = thread_id
+
+        # ✅ ADDED: Loading state for chat history
+        with st.spinner("📚 Loading chat history..."):
+            messages = chat.read_messages(thread_id)
+
+        # Display messages
+        for message in messages:
+            with st.chat_message(message.role):
+                st.markdown(message.content)
+
+        # Chat input
+        user_input = st.chat_input(
+            f"Message {chat_agent.profile.name}..." if not a2a_mode
+            else f"Give orchestration task to {chat_agent.profile.name}...",
+            key="chat_input"
+        )
+
+        if user_input:
+            # Add user message
+            chat.post_message(thread_id, username, "user", user_input)
+
+            # Display user message
+            with st.chat_message("user"):
+                st.markdown(user_input)
+
+            # ✅ ENHANCED: Better loading states for responses
+            with st.chat_message("assistant"):
+                if a2a_mode:
+                    with st.spinner("🎭 Orchestrating across multiple agents..."):
+                        # Show additional status for orchestration
+                        status_placeholder = st.empty()
+                        status_placeholder.info("🔍 Analyzing task and selecting agents...")
+
+                        response_generator = chat_agent.get_response_stream(user_input, thread_id)
+
+                        status_placeholder.info("🤝 Delegating to sub-agents...")
+                else:
+                    with st.spinner(f"💭 {chat_agent.profile.name} is thinking..."):
+                        response_generator = chat_agent.get_response_stream(user_input, thread_id)
+
+                # Process streaming response with loading feedback
+                if hasattr(response_generator, '__call__'):
+                    response_func = response_generator()
+                    full_response = ""
+                    message_placeholder = st.empty()
+
+                    # ✅ ADDED: Progress indicator for streaming
+                    progress_placeholder = st.empty()
+                    char_count = 0
+
+                    for chunk in response_func:
+                        full_response += chunk
+                        char_count += len(chunk)
+
+                        # Update response
+                        message_placeholder.markdown(full_response + "▌")
+
+                        # Update progress (every 50 characters)
+                        if char_count % 50 == 0:
+                            progress_placeholder.caption(f"📝 Received {char_count} characters...")
+
+                    # Clear progress and finalize
+                    progress_placeholder.empty()
+                    message_placeholder.markdown(full_response)
+                else:
+                    full_response = str(response_generator)
+                    st.markdown(full_response)
+
+                # Clear orchestration status if it was shown
+                if a2a_mode and 'status_placeholder' in locals():
+                    status_placeholder.empty()
+
+                # Add assistant response to thread
+                chat.post_message(thread_id, chat_agent.profile.name, "assistant", full_response)
+
+            # ✅ ADDED: Success feedback
+            if a2a_mode:
+                st.success("✅ Orchestration completed!")
+
+            # Refresh to show new messages
+            st.rerun()
+
+
+def main():
+    """Entry point for the chat application."""
+    if "username" not in st.session_state:
+        st.session_state["username"] = "default_user"
+
+    chat_page(st.session_state["username"], win_height=600)
+
+
+if __name__ == "__main__":
+    main()
