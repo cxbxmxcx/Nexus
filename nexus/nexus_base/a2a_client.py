@@ -1,6 +1,7 @@
 """A2A Protocol Client using official a2a-sdk.
 
-⭐ PRODUCTION VERSION - Create at: nexus/nexus_base/a2a_client.py
+⭐ PRODUCTION VERSION - This file is stable and requires no changes.
+It properly encapsulates the A2A client logic.
 """
 
 import uuid
@@ -9,7 +10,7 @@ import logging
 
 try:
     import httpx
-    from a2a.client import A2ACardResolver, A2AClient  
+    from a2a.client import A2ACardResolver, A2AClient
     from a2a.types import AgentCard, MessageSendParams, SendMessageRequest, SendMessageResponse
 except ImportError as e:
     logging.error("Install a2a-sdk: pip install a2a-sdk>=0.2.3")
@@ -61,7 +62,7 @@ class NexusA2AClient:
             return connection
         return None
 
-    async def send_message(self, agent_name: str, message: str, context_id: str, 
+    async def send_message(self, agent_name: str, message: str, context_id: str,
                           conversation_history: str = "", task_id: Optional[str] = None,
                           message_id: Optional[str] = None) -> Dict[str, Any]:
         """Send message to agent via A2A protocol."""
@@ -74,7 +75,6 @@ class NexusA2AClient:
         if message_id is None:
             message_id = str(uuid.uuid4())
 
-        # Build message
         full_message = message
         if conversation_history:
             full_message = f"=== Context ===\n{conversation_history[-2000:]}\n\n=== Task ===\n{message}"
@@ -106,7 +106,6 @@ class NexusA2AClient:
     def _extract_text_from_response(self, response: SendMessageResponse) -> str:
         """Extract text content from A2A response."""
         try:
-            # Handle different response formats
             if hasattr(response, "root") and hasattr(response.root, "result"):
                 artifacts = getattr(response.root.result, "artifacts", []) or []
                 for artifact in artifacts:
