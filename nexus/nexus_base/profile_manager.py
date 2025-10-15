@@ -1,5 +1,4 @@
 import os
-
 import yaml
 
 
@@ -16,6 +15,7 @@ class AgentProfile:
         reasoners,
         planners,
         feedback,
+        orchestration=None,  # ⭐ ADDED orchestration parameter to __init__
     ):
         self.name = name
         self.avatar = avatar
@@ -23,10 +23,12 @@ class AgentProfile:
         self.actions = actions
         self.knowledge = knowledge
         self.memory = memory
-        self.evalutors = evaluators
+        # ⭐ FIXED: Changed from evalutors to evaluators (corrected typo)
+        self.evaluators = evaluators  # Fixed original typo for compatibility
         self.reasoners = reasoners
         self.planners = planners
         self.feedback = feedback
+        self.orchestration = orchestration  # ⭐ ADDED store orchestration in instance
 
 
 class ProfileManager:
@@ -58,6 +60,7 @@ class ProfileManager:
                 reasoners=profile.get("reasoners", None),
                 planners=profile.get("planners", None),
                 feedback=profile.get("feedback", None),
+                orchestration=profile.get("orchestration", None),  # ⭐ ADDED orchestration to profile creation
             )
             self.agent_profiles.append(agent)
 
@@ -70,9 +73,18 @@ class ProfileManager:
     def get_agent_profile_names(self):
         return [profile.name for profile in self.agent_profiles]
 
+    # ⭐ NEW METHOD: Get only orchestrator profiles (those with orchestration config)
+    def get_orchestrator_profile_names(self):
+        """Get only orchestrator profiles (those with orchestration config)."""
+        return [
+            profile.name 
+            for profile in self.agent_profiles 
+            if profile.orchestration is not None
+        ]
 
-# # Usage
-# if __name__ == "__main__":
-#     manager = ProfileManager()
-#     for profile in manager.agent_profiles:
-#         print(profile.persona, profile.preferred_functions)
+    # ⭐ NEW METHOD: Check if a profile is an orchestrator profile
+    def is_orchestrator_profile(self, profile_name):
+        """Check if a profile is an orchestrator profile."""
+        profile = self.get_agent_profile(profile_name)
+        return profile is not None and profile.orchestration is not None
+
