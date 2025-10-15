@@ -87,6 +87,55 @@ class BaseAgent:
     @profile.setter
     def profile(self, profile):
         self._profile = profile
+        # ⭐ ADDED: Auto-initialize orchestration for orchestrator profiles
+        if hasattr(profile, "orchestration") and profile.orchestration:
+            self.initialize_orchestration()
+
+    # ⭐ NEW METHOD: Initialize orchestration capabilities
+    def initialize_orchestration(self):
+        """Initialize orchestration by adding orchestration actions and setup."""
+        try:
+            # Auto-add orchestration actions if not already present
+            self.actions = self.add_orchestration_actions(self.actions)
+
+            # Auto-initialize with agent URLs if configured in profile
+            if (hasattr(self.profile, "orchestration") 
+                and self.profile.orchestration 
+                and "agent_urls" in self.profile.orchestration):
+
+                from nexus.nexus_base.nexus_actions.orchestration_actions import initialize_orchestration
+                agent_urls = self.profile.orchestration.get("agent_urls", "")
+                if agent_urls:
+                    result = initialize_orchestration(agent_urls, _caller_agent=self)
+                    print(f"Auto-initialized orchestration: {result}")
+        except Exception as e:
+            print(f"Error initializing orchestration: {e}")
+
+    # ⭐ NEW METHOD: Add orchestration actions to agent
+    def add_orchestration_actions(self, actions):
+        """Add all orchestration actions if available."""
+        try:
+            from nexus.nexus_base.action_manager import ActionManager
+            action_manager = ActionManager()
+            all_actions = action_manager.get_actions()
+
+            orchestration_action_names = [
+                "initialize_orchestration", "list_available_agents", "delegate_to_agent", 
+                "plan_delegation", "execute_delegation_plan", "orchestrate"
+            ]
+
+            orch_actions = [action for action in all_actions if action["name"] in orchestration_action_names]
+            existing_names = [action["name"] for action in actions]
+
+            for orch_action in orch_actions:
+                if orch_action["name"] not in existing_names:
+                    actions.append(orch_action)  # Only add if unique
+
+            print(f"Auto-loaded {len(orch_actions)} orchestration actions")
+            return actions
+        except Exception as e:
+            print(f"Error adding orchestration actions: {e}")
+            return actions
 
     @classmethod
     def get_supports_actions(cls):
@@ -194,6 +243,7 @@ class AgentManager:
                     )
                     module = importlib.util.module_from_spec(spec)
                     spec.loader.exec_module(module)
+
                     for attribute_name in dir(module):
                         attribute = getattr(module, attribute_name)
                         if (
