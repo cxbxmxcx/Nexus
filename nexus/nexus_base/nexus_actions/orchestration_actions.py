@@ -1,11 +1,12 @@
 """Orchestration actions for A2A agent coordination.
 
-⭐ FULLY IMPLEMENTED - Create at: nexus/nexus_base/nexus_actions/orchestration_actions.py
+⭐ ENHANCED VERSION - Replace: nexus/nexus_base/nexus_actions/orchestration_actions.py
 """
 
 import asyncio
 import json
 import uuid
+import concurrent.futures
 from typing import Dict, List, Optional
 
 from nexus.nexus_base.action_manager import agent_action
@@ -35,13 +36,17 @@ def _sanitize_input(text: str) -> str:
         return str(text)
     return text.replace("\n", " ").replace("\r", "").strip()[:2000]
 
-# ✅ Helper to safely run async code in sync context
+# ✅ ADDED: Safe async execution helper
 def _run_coro(coro):
+    """Safely execute async code in sync context, handling nested event loops."""
     try:
         loop = asyncio.get_running_loop()
-        return loop.run_until_complete(coro)
+        # Running in an existing loop - use thread pool to avoid RuntimeError
+        with concurrent.futures.ThreadPoolExecutor() as executor:
+            future = executor.submit(asyncio.run, coro)
+            return future.result()
     except RuntimeError:
-        # No running loop — use asyncio.run
+        # No running loop - safe to use asyncio.run
         return asyncio.run(coro)
 
 @agent_action
@@ -57,7 +62,7 @@ def initialize_orchestration(agent_urls: str, _caller_agent=None):
     manager = _get_or_create_manager(_caller_agent)
 
     try:
-        # ✅ FIXED: Safe async execution
+        # ✅ USING: Safe async execution
         results = _run_coro(
             asyncio.wait_for(manager.load_agents_from_urls(urls), timeout=30.0)
         )
@@ -100,13 +105,15 @@ def delegate_to_agent(agent_name: str, message: str, _caller_agent=None):
         return f"❌ Agent '{agent_name}' not available. Available: {available}"
 
     try:
-        # ✅ FIXED: Safe async execution
+        # ✅ USING: Safe async execution with conversation history
+        conversation_history = _get_conversation_history(_caller_agent)
         result = _run_coro(
             asyncio.wait_for(
                 manager.a2a_client.send_message(
                     agent_name=agent_name,
                     message=message,
                     context_id=_get_context_id(_caller_agent),
+                    conversation_history=conversation_history
                 ),
                 timeout=15.0
             )
@@ -228,3 +235,116 @@ def plan_delegation(task: str, _caller_agent=None):
         return "Error: No agents available"
 
     return "Delegation plan created based on available agents"
+
+# ✅ ADDED: Missing action functions
+@agent_action
+def refresh_agents(_caller_agent=None):
+    """Refresh all agent connections and health status."""
+    if not _caller_agent:
+        return "Error: No caller agent provided"
+
+    manager = _get_or_create_manager(_caller_agent)
+    cards = manager.get_all_agent_cards()
+
+    if not cards:
+        return "❌ No agents to refresh. Run initialize_orchestration first."
+
+    try:
+        # ✅ USING: Safe async execution
+        _run_coro(
+            asyncio.wait_for(_refresh_all_agents_async(manager), timeout=20.0)
+        )
+
+        active = sum(1 for c in cards if c.status == "active")
+        total = len(cards)
+
+        return f"✅ Refreshed {total} agents: {active} active, {total-active} inactive"
+    except Exception as e:
+        return f"❌ Refresh failed: {str(e)}"
+
+async def _refresh_all_agents_async(manager):
+    """Async helper to refresh all agent health."""
+    refresh_tasks = []
+    for agent_name, card in manager.agent_cards.items():
+        task = asyncio.create_task(_refresh_single_agent(manager, card))
+        refresh_tasks.append(task)
+
+    await asyncio.gather(*refresh_tasks, return_exceptions=True)
+
+async def _refresh_single_agent(manager, card):
+    """Refresh a single agent's health status."""
+    try:
+        new_status = await manager._check_agent_health(card.url)
+        card.status = new_status
+    except Exception:
+        card.status = "error"
+
+@agent_action
+def get_orchestration_status(_caller_agent=None):
+    """Get current orchestration status summary."""
+    if not _caller_agent:
+        return "Error: No caller agent provided"
+
+    manager = _get_or_create_manager(_caller_agent)
+    cards = manager.get_all_agent_cards()
+
+    if not cards:
+        return "❌ No agents loaded. Run initialize_orchestration first."
+
+    active = sum(1 for c in cards if c.status == "active")
+    inactive = sum(1 for c in cards if c.status == "inactive") 
+    error = sum(1 for c in cards if c.status == "error")
+
+    status = f"📊 **Orchestration Status:**\n\n"
+    status += f"**Total Agents:** {len(cards)}\n"
+    status += f"**Active:** {active} 🟢\n"
+    status += f"**Inactive:** {inactive} 🔴\n"
+    status += f"**Error:** {error} ❌\n"
+    status += f"**Health:** {(active/len(cards)*100):.0f}%"
+
+    return status
+
+@agent_action
+def cleanup_orchestration(_caller_agent=None):
+    """Clean up orchestration resources for the agent."""
+    if not _caller_agent:
+        return "Error: No caller agent provided"
+
+    agent_id = _get_agent_id(_caller_agent)
+
+    # Clean up global state
+    if agent_id in _agent_card_managers:
+        manager = _agent_card_managers[agent_id]
+        try:
+            _run_coro(manager.close())
+        except Exception:
+            pass
+        del _agent_card_managers[agent_id]
+
+    if agent_id in _context_ids:
+        del _context_ids[agent_id]
+
+    return "✅ Orchestration resources cleaned up"
+
+def _get_conversation_history(agent) -> str:
+    """Build conversation history from agent's messages."""
+    if not hasattr(agent, 'messages') or not agent.messages:
+        return ""
+
+    history_lines = []
+    for msg in agent.messages[-10:]:  # Last 10 messages for performance
+        role = msg.get("role", "unknown")
+        content = msg.get("content", "")
+
+        if role == "system":
+            continue  # Skip system messages
+        elif role == "user":
+            history_lines.append(f"User: {content}")
+        elif role == "assistant":
+            metadata = msg.get("metadata", {})
+            if "sub_agent" in metadata:
+                history_lines.append(f"{metadata['sub_agent']}: {content}")
+            else:
+                history_lines.append(f"Assistant: {content}")
+
+    return "\n".join(history_lines)
